@@ -254,4 +254,11 @@ PI_CODING_AGENT_DIR=/tmp/pi-scratch PI_WORKSHOP_PACKAGE_SOURCE="$PWD" node bin/s
 
 ### Publishing
 
-Publish only after the unit suite passes on Linux, macOS, and Windows (CI) and the manual acceptance scenarios in `SPEC.md` §38 have been run. `npm publish --access public` from a clean checkout; `files` in `package.json` limits the tarball to `bin`, `extensions`, `src`, `README.md`, and `LICENSE`.
+Releases are published by GitHub Actions through npm trusted publishing, so no npm token exists and nobody publishes from their own machine. After the manual acceptance scenarios in `SPEC.md` §38 have been run, bump the version and push the tag from `main`:
+
+```bash
+npm version patch        # or minor; commits the bump and tags vX.Y.Z
+git push --follow-tags
+```
+
+The tag starts the `publish` job in `.github/workflows/ci.yml`. It waits for the unit suite to pass on Linux, macOS, and Windows, checks that the tag matches the `package.json` version, and publishes with provenance. The trusted publisher on npmjs.com is tied to that workflow filename, so renaming the file breaks publishing until the npm setting is updated. `files` in `package.json` limits the tarball to `bin`, `extensions`, `src`, `README.md`, and `LICENSE`.

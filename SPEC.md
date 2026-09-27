@@ -108,7 +108,7 @@ cail-pi/
 │
 └── .github/
     └── workflows/
-        └── test.yml
+        └── ci.yml
 ```
 
 The package must be both:
