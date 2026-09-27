@@ -136,6 +136,23 @@ function ancestorsOf(path) {
   return out;
 }
 
+/**
+ * Pi's own installer (pi.dev/install.sh, install.ps1) makes a managed install:
+ * `<agent>/bin/pi` is a launcher for `<agent>/install/releases/<current-version>`.
+ * Returns that release's node_modules for a launcher directory, if it is one.
+ */
+export function managedPiReleaseModules(binDir) {
+  const installRoot = join(dirname(binDir), "install");
+  let version;
+  try {
+    version = readFileSync(join(installRoot, "current-version"), "utf8").trim();
+  } catch {
+    return undefined;
+  }
+  if (!/^[0-9A-Za-z._+-]+$/.test(version) || version === "." || version === "..") return undefined;
+  return join(installRoot, "releases", version, "node_modules");
+}
+
 /** Default places to look for the installed Pi package. */
 export function defaultPiPackageCandidates({ platform = process.platform, env = process.env } = {}) {
   const roots = [];
@@ -154,6 +171,8 @@ export function defaultPiPackageCandidates({ platform = process.platform, env = 
       } catch {
         // keep the shim path
       }
+      const managed = managedPiReleaseModules(dirname(real));
+      if (managed) roots.push(managed);
       for (const ancestor of ancestorsOf(dirname(real))) {
         roots.push(ancestor);
         roots.push(join(ancestor, "node_modules"));

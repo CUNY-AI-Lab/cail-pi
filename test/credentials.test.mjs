@@ -11,6 +11,7 @@ import {
   saveApiKey,
   deleteCredentialFallback,
   locatePiPackageDir,
+  managedPiReleaseModules,
 } from "../src/credentials.mjs";
 
 const FAKE_KEY = "cail-test-super-secret-12345";
@@ -151,6 +152,24 @@ test("locatePiPackageDir finds a package.json under the given global npm root", 
   writeFileSync(join(pkgDir, "package.json"), JSON.stringify({ name: "@earendil-works/pi-coding-agent", version: "0.85.1" }));
   assert.equal(locatePiPackageDir({ candidates: [root] }), pkgDir);
   assert.equal(locatePiPackageDir({ candidates: [join(root, "nope")] }), undefined);
+});
+
+test("managedPiReleaseModules follows a managed Pi launcher to its current release", () => {
+  const agentDir = scratch();
+  const binDir = join(agentDir, "bin");
+  const pkgDir = join(agentDir, "install", "releases", "0.87.1", "node_modules", "@earendil-works", "pi-coding-agent");
+  mkdirSync(binDir, { recursive: true });
+  mkdirSync(pkgDir, { recursive: true });
+  writeFileSync(join(pkgDir, "package.json"), JSON.stringify({ name: "@earendil-works/pi-coding-agent", version: "0.87.1" }));
+  writeFileSync(join(agentDir, "install", "current-version"), "0.87.1\n");
+
+  const modules = managedPiReleaseModules(binDir);
+  assert.equal(modules, join(agentDir, "install", "releases", "0.87.1", "node_modules"));
+  assert.equal(locatePiPackageDir({ candidates: [modules] }), pkgDir);
+
+  writeFileSync(join(agentDir, "install", "current-version"), "../escape\n");
+  assert.equal(managedPiReleaseModules(binDir), undefined);
+  assert.equal(managedPiReleaseModules(join(scratch(), "bin")), undefined);
 });
 
 test("saveApiKey stores through the installed Pi AuthStorage when Pi is present (integration)", async (t) => {
