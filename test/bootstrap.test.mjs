@@ -189,6 +189,43 @@ test("Windows enables the PowerShell tool and prints pi.cmd, unless --no-windows
   assert.ok(!h2.calls.some((c) => c.name === "settings.applyWindows"));
 });
 
+test("Windows reports an extended tool list differently from a fresh one", async () => {
+  const h = makeDeps({ platform: "win32", release: "10.0.22631", settings: { applyWindows: () => ({ changed: true, reason: "extended" }) } });
+  await runSetup(opts("--skip-lazypi"), h.deps);
+  assert.match(h.text(), /PowerShell tool added to your Pi tool list/);
+});
+
+test("an older Pi is updated with Pi's own updater before anything else changes", async () => {
+  const h = makeDeps({ pi: { installedVersion: "0.85.1" } });
+  const result = await runSetup(opts("--skip-lazypi"), h.deps);
+  assert.equal(result.exitCode, 0);
+  const names = h.calls.map((c) => c.name);
+  assert.ok(names.indexOf("pi.updateSelf") < names.indexOf("pi.install"), "update runs before the package install");
+  assert.match(h.text(), /Pi updated from 0\.85\.1 to 1\.0\.0/);
+});
+
+test("a current Pi is not updated", async () => {
+  const h = makeDeps();
+  await runSetup(opts("--skip-lazypi"), h.deps);
+  assert.ok(!h.calls.some((c) => c.name === "pi.updateSelf"));
+});
+
+test("setup stops with instructions when Pi cannot be updated", async () => {
+  const h = makeDeps({
+    platform: "win32",
+    release: "10.0.22631",
+    pi: { installedVersion: "0.85.1", updateSelf() { h.calls.push({ name: "pi.updateSelf" }); return { status: 1 }; } },
+  });
+  const result = await runSetup(opts("--skip-lazypi"), h.deps);
+  assert.equal(result.exitCode, 1);
+  assert.equal(result.stage, "pi-version");
+  assert.match(h.text(), /still 0\.85\.1/);
+  assert.match(h.text(), /pi\.cmd update --self/);
+  assert.match(h.text(), /npm\.cmd install -g @earendil-works\/pi-coding-agent@latest/);
+  const mutating = ["pi.install", "settings.applyWindows", "prompt.key", "credentials.save"];
+  assert.ok(!h.calls.some((c) => mutating.includes(c.name)));
+});
+
 test("macOS never touches Windows settings", async () => {
   const h = makeDeps();
   await runSetup(opts("--skip-lazypi"), h.deps);

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { parsePiVersion, parseInstalledPackages, parseInstalledPackageEntries, parseListModels, resolveWorkshopPackageSource, WORKSHOP_PACKAGE_SOURCE, LEGACY_PACKAGE_SOURCE, createPi } from "../src/pi.mjs";
+import { parsePiVersion, compareVersions, isSupportedPiVersion, MIN_PI_VERSION, parseInstalledPackages, parseInstalledPackageEntries, parseListModels, resolveWorkshopPackageSource, WORKSHOP_PACKAGE_SOURCE, LEGACY_PACKAGE_SOURCE, createPi } from "../src/pi.mjs";
 
 test("workshop package source is the npm spec Pi installs", () => {
   assert.equal(WORKSHOP_PACKAGE_SOURCE, "npm:@cuny-ai-lab/cail-pi");
@@ -53,8 +53,10 @@ test("createPi runs pi through the platform spawn plan with argument arrays", ()
   const pi = createPi({ capture: runner, run: runner, platform: "win32" });
   assert.equal(pi.version(), "0.85.1");
   pi.installWorkshopPackage();
+  pi.updateSelf();
   assert.deepEqual(calls[0].args, ["--version"]);
   assert.deepEqual(calls[1].args, ["install", "npm:@cuny-ai-lab/cail-pi"]);
+  assert.deepEqual(calls[2].args, ["update", "--self"]);
   assert.ok(calls.every((c) => c.name === "pi"));
   assert.ok(calls.every((c) => c.options.platform === "win32"));
 });
@@ -114,4 +116,20 @@ test("the earlier pi-workshop package is detected in pi list and removed by its 
   const runner = (name, args) => { calls.push({ name, args }); return { status: 0, stdout: "", stderr: "" }; };
   createPi({ run: runner, capture: runner }).removeLegacyPackage();
   assert.deepEqual(calls[0], { name: "pi", args: ["remove", "npm:@cuny-ai-lab/pi-workshop"] });
+});
+
+test("compareVersions orders releases numerically and prereleases before their release", () => {
+  assert.equal(compareVersions("1.0.0", "1.0.0"), 0);
+  assert.equal(compareVersions("0.85.1", "1.0.0"), -1);
+  assert.equal(compareVersions("0.99.10", "0.99.9"), 1);
+  assert.equal(compareVersions("1.0.0-rc.1", "1.0.0"), -1);
+  assert.equal(compareVersions("1.0.1", "1.0.0-rc.1"), 1);
+});
+
+test("isSupportedPiVersion requires MIN_PI_VERSION or newer", () => {
+  assert.equal(MIN_PI_VERSION, "1.0.0");
+  assert.equal(isSupportedPiVersion("1.0.0"), true);
+  assert.equal(isSupportedPiVersion("1.2.3"), true);
+  assert.equal(isSupportedPiVersion("0.99.2"), false);
+  assert.equal(isSupportedPiVersion(undefined), false);
 });

@@ -52,3 +52,12 @@ test("doctor omits the PowerShell check on macOS and Linux", async () => {
   await runDoctor(h.deps);
   assert.doesNotMatch(h.text(), /PowerShell tool/);
 });
+
+test("doctor flags a Pi older than the supported minimum", async () => {
+  const h = makeDeps({ platform: "win32", release: "10.0.22631", pi: { installedVersion: "0.85.1" } });
+  const result = await runDoctor(h.deps);
+  assert.equal(result.exitCode, 1);
+  assert.match(h.text(), /^Pi\n {2}installed \(0\.85\.1\), 1\.0\.0 or newer needed ✗/m);
+  assert.match(h.text(), /pi\.cmd update --all/);
+  assert.ok(!h.calls.some((c) => c.name === "pi.updateSelf"), "doctor changes nothing");
+});
