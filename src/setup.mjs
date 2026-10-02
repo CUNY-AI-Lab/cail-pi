@@ -7,7 +7,7 @@
  * never part of an error message.
  */
 import { checkNodeVersion } from "./preflight.mjs";
-import { LEGACY_PACKAGE_SOURCE } from "./pi.mjs";
+import { LEGACY_PACKAGE_SOURCE, MIN_PI_VERSION, isSupportedPiVersion } from "./pi.mjs";
 import { executable, platformLabel } from "./platform.mjs";
 import { RULE, banner, fail, indentLines, ok, warn } from "./ui.mjs";
 
@@ -168,6 +168,42 @@ function describeUnexpected(error) {
   return message.length > 120 ? `${message.slice(0, 117)}...` : message;
 }
 
+/**
+ * Brings an older Pi up to MIN_PI_VERSION with Pi's own updater. Returns the
+ * installed version, or undefined (after explaining what to do) when Pi is still too old.
+ */
+function ensurePiVersion(deps) {
+  const { out, err } = deps;
+  const current = deps.pi.version();
+  if (isSupportedPiVersion(current)) return current;
+
+  out("");
+  out(`Pi ${current} is installed; this setup needs Pi ${MIN_PI_VERSION} or newer.`);
+  out("Updating Pi...");
+  out("");
+  const result = deps.pi.updateSelf();
+  const updated = deps.pi.version();
+  if (!result.error && result.status === 0 && isSupportedPiVersion(updated)) {
+    out("");
+    out(ok(`Pi updated from ${current} to ${updated}`));
+    return updated;
+  }
+  const pi = piCommand(deps);
+  const npm = deps.platform === "win32" ? "npm.cmd" : "npm";
+  err("");
+  err(fail(`Pi could not be updated (still ${updated ?? "unknown"}), so setup stopped before changing anything else.`));
+  err("Close every Pi window, then run:");
+  err("");
+  err(`  ${pi} update --self`);
+  err("");
+  err("If that reports it cannot update this installation, run:");
+  err("");
+  err(`  ${npm} install -g @earendil-works/pi-coding-agent@latest`);
+  err("");
+  err("Then run this installer again.");
+  return undefined;
+}
+
 /** Removes the package's earlier name. Both register the `cail` provider, so only one may stay. */
 function removeLegacyPackage(deps, successMessage) {
   const { out } = deps;
@@ -256,7 +292,9 @@ export async function runSetup(options, deps) {
       return { exitCode: 1, stage: "pi" };
     }
   }
-  out(ok(`Pi ${deps.pi.version()} installed`));
+  const piVersion = ensurePiVersion(deps);
+  if (!piVersion) return { exitCode: 1, stage: "pi-version" };
+  out(ok(`Pi ${piVersion} installed`));
 
   out("");
   out("Installing CUNY AI Lab integration...");
@@ -274,7 +312,8 @@ export async function runSetup(options, deps) {
     out(ok("PowerShell detected"));
     if (options.windowsSettings) {
       const result = deps.settings.applyWindows();
-      if (result?.changed) out(ok("Pi configured for PowerShell"));
+      if (result?.reason === "extended") out(ok("PowerShell tool added to your Pi tool list"));
+      else if (result?.changed) out(ok("Pi configured for PowerShell"));
       else if (result?.reason === "already-configured") out(ok("Pi tool settings left as you configured them"));
       else if (result?.message) out(warn(result.message));
     }

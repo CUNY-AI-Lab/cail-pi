@@ -20,7 +20,9 @@ export function makeDeps(overrides = {}) {
     npmVersion: () => "10.9.3",
     pi: {
       installed: true,
-      version() { calls.push({ name: "pi.version" }); return this.installed ? "0.85.1" : undefined; },
+      installedVersion: "1.0.0",
+      version() { calls.push({ name: "pi.version" }); return this.installed ? this.installedVersion : undefined; },
+      updateSelf() { calls.push({ name: "pi.updateSelf" }); this.installedVersion = "1.0.0"; return { status: 0 }; },
       isInstalled() { return this.version() !== undefined; },
       runLazyPi() { calls.push({ name: "lazypi" }); this.installed = true; return { status: 0 }; },
       installWorkshopPackage() { calls.push({ name: "pi.install" }); return { status: 0 }; },

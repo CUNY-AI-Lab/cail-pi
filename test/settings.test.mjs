@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { resolveAgentDir, applyWindowsDefaultTools, WINDOWS_DEFAULT_TOOLS } from "../src/settings.mjs";
+import { resolveAgentDir, applyWindowsDefaultTools, effectiveDefaultTools, powershellToolEnabled, WINDOWS_DEFAULT_TOOLS } from "../src/settings.mjs";
 
 function scratch() {
   return mkdtempSync(join(tmpdir(), "cail-pi-settings-"));
@@ -25,7 +25,8 @@ test("applyWindowsDefaultTools creates settings.json when absent", () => {
   assert.equal(result.reason, "created");
   const written = JSON.parse(readFileSync(join(agentDir, "settings.json"), "utf8"));
   assert.deepEqual(written.defaultTools, WINDOWS_DEFAULT_TOOLS);
-  assert.deepEqual(WINDOWS_DEFAULT_TOOLS, ["read", "powershell", "edit", "write"]);
+  assert.deepEqual(WINDOWS_DEFAULT_TOOLS, ["-bash", "+powershell"]);
+  assert.deepEqual(effectiveDefaultTools(written.defaultTools), ["read", "edit", "write", "powershell"]);
 });
 
 test("applyWindowsDefaultTools adds defaultTools while preserving unrelated settings and backing up", () => {
@@ -45,16 +46,64 @@ test("applyWindowsDefaultTools adds defaultTools while preserving unrelated sett
   assert.equal(backup.defaultTools, undefined);
 });
 
-test("applyWindowsDefaultTools never overwrites an explicit defaultTools choice", () => {
+test("applyWindowsDefaultTools appends +powershell to a tool list the participant chose, keeping their entries", () => {
   const agentDir = scratch();
   const path = join(agentDir, "settings.json");
-  const original = JSON.stringify({ defaultTools: ["read", "bash", "edit", "write"] });
-  writeFileSync(path, original);
+  writeFileSync(path, JSON.stringify({ theme: "dark", defaultTools: ["read", "bash", "edit", "write", "grep"] }));
+  const result = applyWindowsDefaultTools({ agentDir });
+  assert.equal(result.changed, true);
+  assert.equal(result.reason, "extended");
+  const written = JSON.parse(readFileSync(path, "utf8"));
+  assert.deepEqual(written.defaultTools, ["read", "bash", "edit", "write", "grep", "+powershell"]);
+  assert.equal(written.theme, "dark");
+  assert.ok(result.backupPath && existsSync(result.backupPath), "backup written");
+});
+
+test("applyWindowsDefaultTools leaves any list that already names powershell untouched", () => {
+  for (const defaultTools of [["read", "powershell", "edit", "write"], ["-bash", "+powershell"], ["+codemode", "-powershell"]]) {
+    const agentDir = scratch();
+    const path = join(agentDir, "settings.json");
+    const original = JSON.stringify({ defaultTools });
+    writeFileSync(path, original);
+    const result = applyWindowsDefaultTools({ agentDir });
+    assert.equal(result.changed, false, JSON.stringify(defaultTools));
+    assert.equal(result.reason, "already-configured");
+    assert.equal(readFileSync(path, "utf8"), original);
+    assert.equal(readdirSync(agentDir).length, 1, "no backup created");
+  }
+});
+
+test("applyWindowsDefaultTools leaves a defaultTools value that is not a list untouched", () => {
+  const agentDir = scratch();
+  const path = join(agentDir, "settings.json");
+  writeFileSync(path, JSON.stringify({ defaultTools: "read,bash" }));
   const result = applyWindowsDefaultTools({ agentDir });
   assert.equal(result.changed, false);
-  assert.equal(result.reason, "already-configured");
-  assert.equal(readFileSync(path, "utf8"), original);
-  assert.equal(readdirSync(agentDir).length, 1, "no backup created");
+  assert.equal(result.reason, "unrecognized");
+  assert.match(result.message, /\+powershell/);
+});
+
+test("effectiveDefaultTools follows Pi's plain, +name and -name rules", () => {
+  assert.deepEqual(effectiveDefaultTools(undefined), ["read", "bash", "edit", "write"]);
+  assert.deepEqual(effectiveDefaultTools([]), []);
+  assert.deepEqual(effectiveDefaultTools(["+codemode"]), ["read", "bash", "edit", "write", "codemode"]);
+  assert.deepEqual(effectiveDefaultTools(["-bash", "+powershell"]), ["read", "edit", "write", "powershell"]);
+  assert.deepEqual(effectiveDefaultTools(["read", "+powershell", "-read"]), ["powershell"]);
+});
+
+test("powershellToolEnabled reads plain and +powershell entries and respects -powershell", () => {
+  const cases = [
+    [undefined, false],
+    [["read", "powershell", "edit", "write"], true],
+    [["-bash", "+powershell"], true],
+    [["+powershell", "-powershell"], false],
+  ];
+  for (const [defaultTools, expected] of cases) {
+    const agentDir = scratch();
+    writeFileSync(join(agentDir, "settings.json"), JSON.stringify(defaultTools === undefined ? {} : { defaultTools }));
+    assert.equal(powershellToolEnabled({ agentDir }), expected, JSON.stringify(defaultTools));
+  }
+  assert.equal(powershellToolEnabled({ agentDir: join(scratch(), "missing") }), false);
 });
 
 test("applyWindowsDefaultTools refuses to touch malformed JSON", () => {

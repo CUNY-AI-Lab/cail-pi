@@ -1,6 +1,7 @@
 /** `--doctor`: read-only checks. Prints no secrets, changes nothing. */
 import { checkNodeVersion } from "./preflight.mjs";
-import { platformLabel } from "./platform.mjs";
+import { MIN_PI_VERSION, isSupportedPiVersion } from "./pi.mjs";
+import { executable, platformLabel } from "./platform.mjs";
 
 function section(out, title, value, mark) {
   out(title);
@@ -29,7 +30,15 @@ export async function runDoctor(deps) {
   section(out, "npm", npm ? `available (${npm})` : "not found", npm ? "✓" : bad());
 
   const piVersion = deps.pi.version();
-  section(out, "Pi", piVersion ? `installed (${piVersion})` : "not installed", piVersion ? "✓" : bad());
+  if (!piVersion) {
+    section(out, "Pi", "not installed", bad());
+  } else if (!isSupportedPiVersion(piVersion)) {
+    section(out, "Pi", `installed (${piVersion}), ${MIN_PI_VERSION} or newer needed`, bad());
+    out(`  Update it with: ${executable("pi", deps.platform)} update --all`);
+    out("");
+  } else {
+    section(out, "Pi", `installed (${piVersion})`, "✓");
+  }
 
   const extension = piVersion ? deps.pi.hasWorkshopPackage() : false;
   section(out, "CAIL extension", extension ? "installed" : "not installed", extension ? "✓" : bad());

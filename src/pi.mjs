@@ -8,10 +8,37 @@ export const WORKSHOP_PACKAGE_SOURCE = `npm:${WORKSHOP_PACKAGE_NAME}`;
 /** The name this package was first published under; replaced on setup so the provider never loads twice. */
 export const LEGACY_PACKAGE_SOURCE = "npm:@cuny-ai-lab/pi-workshop";
 export const LAZYPI_PACKAGE = "@robzolkos/lazypi";
+/**
+ * Oldest Pi this package is tested with. Older Pi does not understand the
+ * `+name` / `-name` tool entries written on Windows (added in 0.99).
+ */
+export const MIN_PI_VERSION = "1.0.0";
 
 export function parsePiVersion(output) {
   const match = /(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)/.exec(String(output ?? ""));
   return match ? match[1] : undefined;
+}
+
+/** Compares x.y.z versions; a prerelease sorts before its release. Returns -1, 0, or 1. */
+export function compareVersions(a, b) {
+  const parse = (version) => {
+    const [core, prerelease] = String(version).split("-", 2);
+    return { parts: core.split(".").map((part) => Number.parseInt(part, 10) || 0), prerelease };
+  };
+  const left = parse(a);
+  const right = parse(b);
+  for (let i = 0; i < 3; i += 1) {
+    const diff = (left.parts[i] ?? 0) - (right.parts[i] ?? 0);
+    if (diff !== 0) return diff < 0 ? -1 : 1;
+  }
+  if (left.prerelease === right.prerelease) return 0;
+  if (left.prerelease === undefined) return 1;
+  if (right.prerelease === undefined) return -1;
+  return left.prerelease < right.prerelease ? -1 : 1;
+}
+
+export function isSupportedPiVersion(version, minimum = MIN_PI_VERSION) {
+  return typeof version === "string" && compareVersions(version, minimum) >= 0;
 }
 
 /** Developer override: install from a local checkout instead of npm (never needed by participants). */
@@ -85,6 +112,10 @@ export function createPi({ capture = captureCommand, run = runCommand, platform 
     },
     isInstalled() {
       return this.version() !== undefined;
+    },
+    /** Pi's own self-update (`pi update --self`), which knows how Pi was installed. */
+    updateSelf() {
+      return run("pi", ["update", "--self"], options);
     },
     installWorkshopPackage() {
       return run("pi", ["install", resolveWorkshopPackageSource(env)], options);

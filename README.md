@@ -16,7 +16,7 @@ npx @cuny-ai-lab/cail-pi
 
 The installer will:
 
-* set up Pi through LazyPi
+* set up Pi through LazyPi, and update Pi to 1.0 or newer if an older version is installed
 * install the CUNY AI Lab provider
 * ask for your CUNY AI Lab API key (your typing is hidden)
 * verify the key
@@ -107,7 +107,19 @@ Then `/model` inside Pi.
 
 ## Already have Pi?
 
-Running the installer again is safe. It confirms Pi, updates the CUNY AI Lab package, and asks whether to keep the key you already saved (default: yes). Useful flags:
+Update Pi and every Pi package, including this one, with Pi's own updater:
+
+```bash
+pi update --all          # macOS / Linux
+```
+
+```powershell
+pi.cmd update --all      # Windows
+```
+
+Close any open Pi sessions first. Your saved key and settings are kept.
+
+Running the installer again is also safe. It updates Pi if it is older than 1.0, updates the CUNY AI Lab package, and asks whether to keep the key you already saved (default: yes). Useful flags:
 
 | Flag | Effect |
 | --- | --- |
@@ -150,13 +162,16 @@ Use the `.cmd` forms: `npx.cmd`, `npm.cmd`, `pi.cmd`. There is no need to change
 **Windows: `pi` is not recognized after LazyPi**
 Close the window and open a new PowerShell window so it picks up the updated PATH, then run `pi.cmd`.
 
+**Warnings about other extensions after updating to Pi 1.0**
+Pi 1.0 prints warnings when it starts if some community packages installed by LazyPi declare Pi's modules the old way (`Host-provided extension packages must be declared in peerDependencies`), or when `pi-mcp-adapter` replaces Pi's new built-in MCP support. They come from those packages, not from CUNY AI Lab, and Pi still works. Pi turns off its built-in MCP by itself while `pi-mcp-adapter` is installed.
+
 **A hand-written `extensions/cail.ts` from an earlier setup**
 `--doctor` warns if one exists. Delete it once the package works, otherwise the provider is registered twice.
 
 ## Windows notes
 
 * The installer, LazyPi, and Pi all run natively in Windows PowerShell 5.1 and PowerShell 7.
-* On Windows the installer enables Pi's built-in `powershell` tool by setting `defaultTools` to `["read", "powershell", "edit", "write"]` in `%USERPROFILE%\.pi\agent\settings.json`, unless you already set `defaultTools` yourself. A backup of the previous settings file is written next to it.
+* On Windows the installer enables Pi's built-in `powershell` tool in `%USERPROFILE%\.pi\agent\settings.json`. Without a `defaultTools` setting it writes `["-bash", "+powershell"]`, which swaps the model's Bash tool for PowerShell and keeps Pi's other default tools. If you already chose a tool list, it appends `"+powershell"` and leaves your entries alone; a list that already mentions `powershell`, including `"-powershell"`, is not touched. A backup of the previous settings file is written next to it.
 * Nothing is written to your PowerShell profile and the execution policy is never changed.
 
 ## Privacy and security
@@ -173,13 +188,13 @@ Advanced users may instead set the `AILAB_API_KEY` environment variable; the pro
 
 The list of CUNY AI Lab models comes live from the gateway each time Pi starts, so new models appear without updating anything.
 
-Update the package itself with Pi's normal mechanism:
+Update Pi and all packages, including this one, with `pi update --all` (`pi.cmd update --all` on Windows), or update only this package with:
 
 ```text
 pi update npm:@cuny-ai-lab/cail-pi
 ```
 
-or re-run the installer.
+or re-run the installer. This package needs Pi 1.0 or newer; the installer updates an older Pi through `pi update --self`, and `--doctor` flags one.
 
 ### Renamed from `@cuny-ai-lab/pi-workshop`
 
@@ -228,6 +243,8 @@ test/                node:test suites, mocked gateway; test/live for the real ga
 * Models are discovered from `GET /v1/models`. The gateway response already carries names, capabilities (vision, reasoning), context length, pricing, status, and sunset dates, so there is no static model list in this package. The extension fetches the catalog once at load (public endpoint, 5 s timeout, skipped when `PI_OFFLINE` is set) so `/model` and `pi --list-models` work immediately, and again through `fetchModels` on Pi's normal refreshes.
 * Speech models, sunset models, and models whose catalog entry lacks `function-calling` are filtered out: Pi sends its tools with every request and the gateway rejects tool calls to such models (`capability_unsupported`). Models with no capability information are still offered, with conservative defaults (text only, no reasoning, 128K context, 16K output).
 * Key validation calls `GET /v1/quota`, which requires a valid bearer credential and performs no inference. `/v1/models` is public on the gateway and cannot validate a key.
+* The extension imports from `@earendil-works/pi-ai/compat`. Pi's extension loader aliases only the root, `/compat`, `/oauth`, and `/providers/all` entry points, and in Pi 1.0 only `/compat` exports `openAICompletionsApi`. Pi's own 1.0 provider examples import from `/compat` too.
+* The Windows tool setting relies on Pi's `+name` / `-name` `defaultTools` entries (Pi 0.99+), which is why the installer requires Pi 1.0 (`MIN_PI_VERSION` in `src/pi.mjs`) and runs `pi update --self` on older installs.
 * Credentials are stored through Pi's own `AuthStorage`, dynamically imported from the installed `@earendil-works/pi-coding-agent` (found via `npm root -g` or the `pi` executable), so no second copy of Pi is bundled. If that import is unavailable, a narrow writer with the same `auth.json` schema is used: atomic write, backup, owner-only permissions, other providers preserved, malformed JSON refused.
 
 ### Developing
