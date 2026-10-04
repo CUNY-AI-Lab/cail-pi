@@ -26,8 +26,6 @@ Adds CUNY AI Lab to [Pi](https://pi.dev): the lab's models through the CUNY AI L
    pi install npm:@cuny-ai-lab/cail-pi
    ```
 
-   On Windows, type `pi.cmd` wherever this guide says `pi`.
-
 3. Start Pi and sign in:
 
    ```text
@@ -60,7 +58,7 @@ Check for missing or extra characters and run `/login` again. Keys are individua
 Pi lists them once a key is saved. If `/cail` says the key is valid but the list stays empty, restart Pi.
 
 **Windows: "running scripts is disabled on this system"**
-Type `pi.cmd` instead of `pi`. There is no need to change the execution policy.
+Pi's installer removes its PowerShell launcher when the execution policy would block it, so `pi` runs `pi.cmd`. If the policy changed after installing, type `pi.cmd` instead of `pi`. There is no need to change the execution policy.
 
 **Coming from the earlier setup**
 Earlier versions installed through `npx @cuny-ai-lab/cail-pi` and LazyPi. That installer is gone. To keep Pi lean, list your packages with `pi list` and remove the ones you do not use with `pi remove <source>`. Remove any hand-written `cail` provider from `~/.pi/agent/models.json` and any `~/.pi/agent/extensions/cail.ts`, since the package registers the same provider. The deprecated `npm:@cuny-ai-lab/pi-workshop` package also registers it; remove it with `pi remove npm:@cuny-ai-lab/pi-workshop`.
