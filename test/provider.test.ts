@@ -25,13 +25,14 @@ function refreshContext(overrides: Record<string, unknown> = {}) {
   };
 }
 
-test("provider is registered as cail / CUNY AI Lab on the gateway base URL with env fallback auth", () => {
+test("provider is registered as cail / CUNY AI Lab on the gateway base URL with sign-in, key and env auth", () => {
   const provider = buildCailProvider({ fetch: fetchStub(() => new Response(catalog)) });
   assert.equal(provider.id, "cail");
   assert.equal(provider.name, "CUNY AI Lab");
   assert.equal(provider.baseUrl, "https://tools.ailab.gc.cuny.edu/v1");
   assert.equal(provider.auth.apiKey?.name, "CUNY AI Lab API key");
   assert.equal(typeof provider.auth.apiKey?.login, "function", "supports /login");
+  assert.equal(provider.auth.oauth?.loginLabel, "Sign in with CUNY AI Lab", "offers browser sign-in in /login");
   assert.deepEqual(provider.getModels(), [], "no hard-coded models");
 });
 

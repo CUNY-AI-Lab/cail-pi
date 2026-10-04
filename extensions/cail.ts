@@ -5,8 +5,9 @@
  * chat-completions API against https://tools.ailab.gc.cuny.edu/v1 and
  * discovers its models dynamically from `/v1/models` on every refresh.
  *
- * Credentials: Pi's stored `cail` credential (set with `/login`), or
- * AILAB_API_KEY for advanced users.
+ * Credentials: "Sign in with CUNY AI Lab" in `/login`, which gets this
+ * computer its own key through the Lab's connect page (src/signin.mjs); a
+ * pasted API key; or AILAB_API_KEY for advanced users.
  *
  * Also: starts sessions on the newest DeepSeek Flash when no model is chosen,
  * enables the PowerShell tool on Windows unless `defaultTools` is set, and
@@ -17,6 +18,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { checkApiKey, fetchModelCatalog } from "../src/cail-api.mjs";
 import { CAIL_BASE_URL, CAIL_PROVIDER_ID, CAIL_PROVIDER_NAME, CatalogError, newestDeepSeekFlash, toPiModels } from "../src/cail-catalog.mjs";
 import { formatDoctorReport } from "../src/doctor.mjs";
+import { createSignIn } from "../src/signin.mjs";
 import { applyWindowsDefaultTools, powershellToolEnabled } from "../src/settings.mjs";
 
 /** The health check, typed as `/cail` in Pi. */
@@ -27,6 +29,7 @@ type FetchLike = typeof globalThis.fetch;
 export interface BuildOptions {
   fetch?: FetchLike;
   baseUrl?: string;
+  env?: Record<string, string | undefined>;
   /** Baseline models registered immediately (normally the catalog fetched at load time). */
   initialModels?: ReturnType<typeof toPiModels>;
 }
@@ -95,7 +98,10 @@ export function buildCailProvider(options: BuildOptions = {}): Provider<"openai-
     id: CAIL_PROVIDER_ID,
     name: CAIL_PROVIDER_NAME,
     baseUrl,
-    auth: { apiKey: envApiKeyAuth("CUNY AI Lab API key", ["AILAB_API_KEY"]) },
+    auth: {
+      apiKey: envApiKeyAuth("CUNY AI Lab API key", ["AILAB_API_KEY"]),
+      oauth: createSignIn({ fetch: options.fetch, env: options.env }),
+    },
     models: options.initialModels ?? [],
     fetchModels,
     api: openAICompletionsApi(),
@@ -114,7 +120,7 @@ export function hasChosenModel(model: { provider?: string; id?: string; api?: st
 export default async function cailExtension(pi: ExtensionAPI, startup: StartupOptions = {}): Promise<void> {
   const platform = startup.platform ?? process.platform;
   const initialModels = await loadStartupModels(startup);
-  pi.registerProvider(buildCailProvider({ fetch: startup.fetch, baseUrl: startup.baseUrl, initialModels }));
+  pi.registerProvider(buildCailProvider({ fetch: startup.fetch, baseUrl: startup.baseUrl, env: startup.env, initialModels }));
 
   // Later sessions start on the newest DeepSeek Flash by themselves, because it
   // is first in the catalog. After `/login`, though, Pi selects no model for a

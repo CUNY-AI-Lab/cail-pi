@@ -1,6 +1,6 @@
 # CUNY AI Lab × Pi
 
-Adds CUNY AI Lab to [Pi](https://pi.dev): the lab's models through the CUNY AI Lab Gateway, web search and page reading, and a way for Pi to ask you questions. You need a personal CUNY AI Lab API key.
+Adds CUNY AI Lab to [Pi](https://pi.dev): the lab's models through the CUNY AI Lab Gateway, web search and page reading, and a way for Pi to ask you questions. You need a CUNY AI Lab account with model access.
 
 ## Set up
 
@@ -32,9 +32,13 @@ Adds CUNY AI Lab to [Pi](https://pi.dev): the lab's models through the CUNY AI L
    pi
    ```
 
-   Type `/login`, choose **Sign in with an API key**, type `CUNY` to find **CUNY AI Lab**, press Enter, and paste your key.
+   Type `/login cail` and choose **Sign in with CUNY AI Lab**. Your browser opens the lab's sign-in page. Sign in with CUNY Login, click **Connect Pi**, and return to Pi.
 
-   Pi then reports that "no default model is configured for provider "cail"". That message is expected: your key is saved. Type your first message and Pi answers with DeepSeek V4 Flash.
+   Pi then reports that it logged in "but no default model is configured for provider "cail"". That message is expected. Type your first message and Pi answers with DeepSeek V4 Flash.
+
+   Working on another computer over SSH? Pi shows a link instead of opening a browser. Open the link on any computer, click **Connect Pi**, and paste the code it shows into Pi.
+
+   You can also choose **Sign in with an API key** and paste a personal key from [Model access](https://tools.ailab.gc.cuny.edu/model-access).
 
 ## What you get
 
@@ -49,7 +53,13 @@ Adds CUNY AI Lab to [Pi](https://pi.dev): the lab's models through the CUNY AI L
 Type `/cail` inside Pi. It reports whether the gateway is reachable, whether your key is saved and accepted, how many CUNY AI Lab models you can use, which model is active, and on Windows whether the PowerShell tool is on. It never shows your key.
 
 **"No API key found for the selected model"**
-Run `/login` and choose CUNY AI Lab, as in step 3.
+Run `/login cail` and sign in, as in step 3.
+
+**"Your CUNY AI Lab sign-in has expired"**
+Keys from signing in last 180 days. Type `/login cail` and sign in again.
+
+**"Your CUNY AI Lab access is not active yet"**
+Signing in works only for accounts with lab model access. Open [Model access](https://tools.ailab.gc.cuny.edu/model-access) to see how to request it.
 
 **"That API key was not accepted"** (in `/cail`)
 Check for missing or extra characters and run `/login` again. Keys are individual; use the one issued to you.
@@ -65,6 +75,7 @@ Versions up to 0.3.0 installed through `npx @cuny-ai-lab/cail-pi` and LazyPi. Th
 
 ## Privacy and security
 
+* Signing in creates a personal key for this computer, named "Pi on" and the computer's name, that expires after 180 days. It is listed in [Model access](https://tools.ailab.gc.cuny.edu/model-access), where you can revoke it. Signing in again from the same computer replaces that key; a key you pasted yourself is never replaced.
 * Pi stores your key when you run `/login`, in `~/.pi/agent/auth.json` with owner-only permissions on macOS and Linux.
 * The CUNY AI Lab extension sends your key only to the CUNY AI Lab gateway: with every model request, and to check it when you run `/cail`.
 * Web searches go to Exa. Pages are fetched directly from your computer.
@@ -74,7 +85,7 @@ Versions up to 0.3.0 installed through `npx @cuny-ai-lab/cail-pi` and LazyPi. Th
 
 Update the package with `pi update npm:@cuny-ai-lab/cail-pi`, and update Pi itself with `pi update`.
 
-Remove the package with `pi remove npm:@cuny-ai-lab/cail-pi`. Your key stays in Pi until you run `/logout`.
+Remove the package with `pi remove npm:@cuny-ai-lab/cail-pi`. Your key stays in Pi until you run `/logout`. Logging out does not revoke the key; revoke it in Model access if you no longer need it.
 
 ---
 
@@ -88,6 +99,7 @@ extensions/cail.ts    Pi extension: the "cail" provider, the session-start model
 src/cail-catalog.mjs  gateway catalog → Pi models, newest DeepSeek Flash first
 src/cail-api.mjs      key check (/v1/quota) and catalog fetch (/v1/models)
 src/doctor.mjs        /cail report formatting
+src/signin.mjs        "Sign in with CUNY AI Lab": loopback or copy-code sign-in, PKCE, key exchange
 src/settings.mjs      Windows defaultTools merge
 test/                 node:test suites with a mocked gateway; test/live for the real gateway
 ```
@@ -96,7 +108,8 @@ test/                 node:test suites with a mocked gateway; test/live for the 
 
 ### How it fits Pi
 
-* The provider is a native pi-ai provider built with `createProvider` from `@earendil-works/pi-ai/compat`, using `envApiKeyAuth("CUNY AI Lab API key", ["AILAB_API_KEY"])` and `openAICompletionsApi()`. Pi owns `/login`, `/logout`, credential storage, streaming and catalog persistence.
+* The provider is a native pi-ai provider built with `createProvider` from `@earendil-works/pi-ai/compat`, using `envApiKeyAuth("CUNY AI Lab API key", ["AILAB_API_KEY"])`, an OAuth sign-in, and `openAICompletionsApi()`. Pi owns `/login`, `/logout`, credential storage, streaming and catalog persistence.
+* Sign-in follows the lab's connect flow, documented in the Model Access API README. Pi opens `/model-access/connect` with a PKCE challenge and, on its own computer, a `127.0.0.1` callback; over SSH (`SSH_CONNECTION`, `SSH_CLIENT` or `SSH_TTY` set) it asks for the code the page shows. It trades the code at `/model-access/v1/connect/token` for an ordinary personal key and stores it as an OAuth credential whose expiry is the key's. When Pi's stored `cail` credential came from an earlier sign-in, the exchange names that key so the lab replaces it. An expired credential cannot be refreshed; Pi reports that the participant should sign in again.
 * Models come from `GET /v1/models`. The response carries names, capabilities, context length, pricing, status and sunset dates, so the package has no static model list. The extension fetches the catalog once at load (public endpoint, 5 s timeout, skipped when `PI_OFFLINE` is set) and again through `fetchModels` on Pi's refreshes.
 * Speech models, sunset models, and models whose catalog entry lacks `function-calling` are dropped, because Pi sends its tools with every request and the gateway rejects tool calls to such models. Models with no capability information are offered with conservative defaults.
 * With no saved default, Pi starts on the first available model of a provider it has no built-in default for, so the catalog lists the newest DeepSeek Flash first. After `/login`, Pi selects no model for such a provider and holds a placeholder model instead; an `input` handler selects the newest DeepSeek Flash for that session when the first message arrives. Neither writes settings, and a saved default always wins.
