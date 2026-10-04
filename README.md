@@ -101,7 +101,8 @@ src/cail-api.mjs      key check (/v1/quota) and catalog fetch (/v1/models)
 src/doctor.mjs        /cail report formatting
 src/signin.mjs        "Sign in with CUNY AI Lab": loopback or copy-code sign-in, PKCE, key exchange
 src/settings.mjs      Windows defaultTools merge
-test/                 node:test suites with a mocked gateway; test/live for the real gateway
+test/                 node:test suites with a mocked gateway; test/live for the real gateway;
+                      test/smoke installs the packed package into a clean Pi and runs pi -p
 ```
 
 `pi-ask-user` and `pi-web-access` are exact-version `dependencies`, listed in `bundleDependencies` so they ship inside this package's tarball, and loaded through the `pi` manifest's `node_modules/...` paths. Pi's [package documentation](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/packages.md) requires that form for Pi packages used as dependencies. Their versions change only when this package is released; read their changelogs before raising them. `.npmrc` sets `legacy-peer-deps` so their peer dependencies, which Pi provides, are never installed or bundled.
@@ -121,6 +122,7 @@ test/                 node:test suites with a mocked gateway; test/live for the 
 npm install
 npm test                 # unit tests, mocked gateway
 CAIL_LIVE_TEST_KEY=... npm run test:live   # optional, real gateway
+npm run test:smoke       # packed package in a clean Pi profile, one pi -p call
 npm pack --dry-run       # review the published files and bundled packages
 ```
 
@@ -142,4 +144,4 @@ npm version patch        # or minor; commits the bump and tags vX.Y.Z
 git push --follow-tags
 ```
 
-The tag starts the `publish` job in `.github/workflows/ci.yml`. It waits for the unit suite to pass on Linux, macOS and Windows, checks that the tag matches the `package.json` version, and publishes with provenance. The trusted publisher on npmjs.com is tied to that workflow filename, so renaming the file breaks publishing until the npm setting is updated. `files` in `package.json` limits our own files to `extensions`, `src`, `README.md` and `LICENSE`; the bundled packages are added by `bundleDependencies`.
+The tag starts the `publish` job in `.github/workflows/ci.yml`. It waits for the unit suite and the `pi -p` smoke test to pass on Linux, macOS and Windows, checks that the tag matches the `package.json` version, and publishes with provenance. The trusted publisher on npmjs.com is tied to that workflow filename, so renaming the file breaks publishing until the npm setting is updated. `files` in `package.json` limits our own files to `extensions`, `src`, `README.md` and `LICENSE`; the bundled packages are added by `bundleDependencies`.

@@ -25,6 +25,26 @@ jobs:
       - run: npm test
       - run: npm pack --dry-run
 
+  pi-smoke:
+    # Installs the packed package into a clean Pi profile, using the Pi version
+    # in package-lock.json, and runs `pi -p` with a deliberately invalid key.
+    # The unit suite resolves pi-ai from this checkout; this job loads the
+    # extensions through Pi's own loader, as participants get them. Needs no
+    # secret: the gateway's invalid_credential reply is the expected outcome.
+    name: pi -p smoke / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.x"
+      - run: npm ci
+      - run: npm run test:smoke
+
   live:
     # Optional integration test against the real CAIL gateway. Runs only when
     # a repository secret is configured; never needed for ordinary CI.
@@ -43,14 +63,15 @@ jobs:
           CAIL_LIVE_TEST_KEY: ${{ secrets.CAIL_LIVE_TEST_KEY }}
 
   publish:
-    # Publishes to npm when a v* tag is pushed, after the unit matrix passes.
+    # Publishes to npm when a v* tag is pushed, after the unit matrix and the
+    # pi -p smoke test pass.
     # Authenticates through npm trusted publishing (OIDC): no npm token is
     # stored here. The trusted publisher on npmjs.com names this file, ci.yml.
     # Verbose logging is the only way npm reports whether the OIDC exchange
     # succeeded, so a misconfigured trusted publisher is diagnosable.
     name: publish to npm
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: unit
+    needs: [unit, pi-smoke]
     runs-on: ubuntu-latest
     permissions:
       contents: read
