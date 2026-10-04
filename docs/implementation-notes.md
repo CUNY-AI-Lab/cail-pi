@@ -1,5 +1,7 @@
 # Implementation notes
 
+> **Historical.** This is the specification for the `npx @cuny-ai-lab/cail-pi` installer (0.1–0.2), which was replaced by a Pi package installed with `pi install npm:@cuny-ai-lab/cail-pi`. The README describes the current design.
+
 Findings from inspecting Pi 0.85.1 (`@earendil-works/pi-coding-agent`, `@earendil-works/pi-ai`)
 and the CAIL gateway on 2026-09-16, and the decisions they drove. Section numbers refer to `SPEC.md`.
 

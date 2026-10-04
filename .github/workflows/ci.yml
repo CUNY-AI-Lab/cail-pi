@@ -23,7 +23,6 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: npm ci
       - run: npm test
-      - run: node bin/setup.mjs --help
       - run: npm pack --dry-run
 
   live:

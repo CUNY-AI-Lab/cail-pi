@@ -1,14 +1,10 @@
 {
   "name": "@cuny-ai-lab/cail-pi",
   "version": "0.2.0",
-  "description": "CUNY AI Lab workshop setup and model provider for Pi",
+  "description": "CUNY AI Lab provider, web search and ask-user tools for Pi",
   "type": "module",
   "license": "MIT",
-  "bin": {
-    "cail-pi": "bin/setup.mjs"
-  },
   "files": [
-    "bin",
     "extensions",
     "src",
     "README.md",
@@ -26,7 +22,12 @@
   ],
   "pi": {
     "extensions": [
-      "./extensions/cail.ts"
+      "./extensions/cail.ts",
+      "./node_modules/pi-ask-user/index.ts",
+      "./node_modules/pi-web-access/dist"
+    ],
+    "skills": [
+      "./node_modules/pi-ask-user/skills"
     ]
   },
   "scripts": {
@@ -35,8 +36,13 @@
     "pack:check": "npm pack --dry-run"
   },
   "dependencies": {
-    "@inquirer/prompts": "^8.7.2"
+    "pi-ask-user": "0.16.0",
+    "pi-web-access": "0.35.0"
   },
+  "bundleDependencies": [
+    "pi-ask-user",
+    "pi-web-access"
+  ],
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",
     "@earendil-works/pi-coding-agent": "*"
@@ -50,7 +56,7 @@
     }
   },
   "devDependencies": {
-    "@earendil-works/pi-ai": "^0.85.1"
+    "@earendil-works/pi-ai": "^1.0.2"
   },
   "publishConfig": {
     "access": "public"

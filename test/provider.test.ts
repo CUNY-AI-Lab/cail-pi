@@ -113,13 +113,114 @@ test("loadStartupModels returns no models offline or on failure instead of break
   assert.deepEqual(await loadStartupModels({ fetch: malformed, env: {} }), []);
 });
 
-test("the extension factory registers the provider with startup models as its baseline", async () => {
-  const mod = await import("../extensions/cail.ts");
-  const fetch = fetchStub(() => new Response(catalog));
+type Handler = (event: unknown, ctx: unknown) => unknown;
+
+function fakePi() {
+  const handlers: Record<string, Handler[]> = {};
+  const commands: Record<string, { handler: (args: string, ctx: unknown) => Promise<void> }> = {};
   const registered: unknown[] = [];
-  await mod.default({ registerProvider: (p: unknown) => registered.push(p) } as never, { fetch, env: {} });
+  const selected: unknown[] = [];
+  const pi = {
+    registerProvider: (provider: unknown) => registered.push(provider),
+    on: (event: string, handler: Handler) => {
+      (handlers[event] ??= []).push(handler);
+      return () => {};
+    },
+    registerCommand: (name: string, options: (typeof commands)[string]) => {
+      commands[name] = options;
+    },
+    setModel: async (model: unknown) => {
+      selected.push(model);
+      return true;
+    },
+  };
+  return { pi, handlers, commands, registered, selected };
+}
+
+function sessionContext(overrides: Record<string, unknown> = {}) {
+  const notes: { message: string; type?: string }[] = [];
+  const available = [
+    { provider: "cail", id: "gpt-oss-120b" },
+    { provider: "cail", id: "deepseek-v4-flash-0731" },
+    { provider: "other", id: "deepseek-v5-flash-0101" },
+  ];
+  return {
+    notes,
+    model: undefined,
+    modelRegistry: {
+      getAvailable: () => available,
+      getApiKeyForProvider: async () => FAKE_KEY,
+    },
+    ui: { notify: (message: string, type?: string) => notes.push({ message, type }) },
+    ...overrides,
+  };
+}
+
+async function loadExtension(options: Record<string, unknown> = {}) {
+  const mod = await import("../extensions/cail.ts");
+  const fake = fakePi();
+  const fetch = fetchStub(() => new Response(catalog));
+  await mod.default(fake.pi as never, { fetch, env: {}, platform: "darwin", ...options } as never);
+  return { mod, ...fake };
+}
+
+test("the extension factory registers the provider with startup models as its baseline", async () => {
+  const { registered } = await loadExtension();
   assert.equal(registered.length, 1);
   const provider = registered[0] as { id: string; getModels: () => unknown[] };
   assert.equal(provider.id, "cail");
   assert.ok(provider.getModels().length >= 3, "models available immediately after load");
+});
+
+test("a message sent with no model selected starts the session on the newest CUNY AI Lab DeepSeek Flash", async () => {
+  const { handlers, selected } = await loadExtension();
+  const result = await handlers.input[0]({ type: "input", text: "hello" }, sessionContext());
+  assert.deepEqual(result, { action: "continue" });
+  assert.deepEqual(selected, [{ provider: "cail", id: "deepseek-v4-flash-0731" }]);
+});
+
+test("Pi's placeholder model after /login counts as no model", async () => {
+  const { handlers, selected } = await loadExtension();
+  const placeholder = { provider: "unknown", id: "unknown", api: "unknown" };
+  await handlers.input[0]({ type: "input", text: "hello" }, sessionContext({ model: placeholder }));
+  assert.deepEqual(selected, [{ provider: "cail", id: "deepseek-v4-flash-0731" }]);
+});
+
+test("a model the participant already chose is never replaced", async () => {
+  const { handlers, selected } = await loadExtension();
+  const result = await handlers.input[0]({ type: "input", text: "hello" }, sessionContext({ model: { provider: "cail", id: "gpt-oss-120b" } }));
+  assert.deepEqual(result, { action: "continue" });
+  assert.deepEqual(selected, []);
+});
+
+test("the PowerShell setting is applied only on Windows, once, and only when defaultTools is unset", async () => {
+  const { mkdtempSync, readFileSync: read } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const agentDir = mkdtempSync(join(tmpdir(), "cail-pi-agent-"));
+
+  assert.equal((await loadExtension()).handlers.session_start, undefined, "not registered off Windows");
+
+  const { handlers } = await loadExtension({ platform: "win32", env: { PI_CODING_AGENT_DIR: agentDir } });
+  const first = sessionContext();
+  await handlers.session_start[0]({ type: "session_start", reason: "startup" }, first);
+  assert.deepEqual(JSON.parse(read(join(agentDir, "settings.json"), "utf8")).defaultTools, ["read", "powershell", "edit", "write"]);
+  assert.match(first.notes[0].message, /enabled Pi's PowerShell tool/);
+
+  const second = sessionContext();
+  await handlers.session_start[0]({ type: "session_start", reason: "startup" }, second);
+  assert.deepEqual(second.notes, [], "an existing defaultTools is left alone");
+});
+
+test("/cail reports the setup without printing the key", async () => {
+  const { mod, commands } = await loadExtension({
+    fetch: fetchStub((url) => (url.endsWith("/quota") ? new Response("{}") : new Response(catalog))),
+  });
+  const ctx = sessionContext({ model: { provider: "cail", id: "deepseek-v4-flash-0731" } });
+  await commands[mod.COMMAND_NAME].handler("", ctx);
+  assert.equal(ctx.notes.length, 1);
+  assert.equal(ctx.notes[0].type, "info");
+  assert.match(ctx.notes[0].message, /API key: valid ✓/);
+  assert.match(ctx.notes[0].message, /Current model: cail\/deepseek-v4-flash-0731/);
+  assert.ok(!ctx.notes[0].message.includes(FAKE_KEY));
 });

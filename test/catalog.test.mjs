@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { CAIL_BASE_URL, parseCatalog, toPiModels } from "../src/cail-catalog.mjs";
+import { CAIL_BASE_URL, newestDeepSeekFlash, parseCatalog, toPiModels } from "../src/cail-catalog.mjs";
 
 const fixture = JSON.parse(readFileSync(new URL("./fixtures/models-catalog.json", import.meta.url), "utf8"));
 
@@ -30,6 +30,24 @@ test("toPiModels excludes non-text models and sunset models", () => {
   assert.ok(ids.includes("gemma-3-12b-it"));
   assert.ok(ids.includes("gpt-oss-120b"));
   assert.ok(ids.includes("llama-3.2-1b-instruct"));
+});
+
+test("newestDeepSeekFlash prefers the higher version, then the later release", () => {
+  const models = ["deepseek-v4-flash-0731", "deepseek-v4-pro-0813", "deepseek-v4-flash-0115", "deepseek-v3-flash", "gpt-oss-120b"].map((id) => ({ id }));
+  assert.equal(newestDeepSeekFlash(models).id, "deepseek-v4-flash-0731");
+  assert.equal(newestDeepSeekFlash([...models, { id: "deepseek-v5-flash-0101" }]).id, "deepseek-v5-flash-0101");
+  assert.equal(newestDeepSeekFlash([{ id: "deepseek-v4-pro-0813" }, { id: "deepseek-r1-distill-qwen-32b" }]), undefined);
+});
+
+test("toPiModels lists the newest DeepSeek Flash first and keeps the rest in catalog order", () => {
+  const entry = (id) => ({ id, capabilities: ["text-generation", "function-calling"] });
+  const payload = { data: ["gpt-oss-120b", "deepseek-v4-flash-0731", "gemma-3-12b-it", "deepseek-v4-pro-0813"].map(entry) };
+  assert.deepEqual(
+    toPiModels(payload).map((m) => m.id),
+    ["deepseek-v4-flash-0731", "gpt-oss-120b", "gemma-3-12b-it", "deepseek-v4-pro-0813"],
+  );
+  const withoutFlash = { data: ["gpt-oss-120b", "gemma-3-12b-it"].map(entry) };
+  assert.deepEqual(toPiModels(withoutFlash).map((m) => m.id), ["gpt-oss-120b", "gemma-3-12b-it"]);
 });
 
 test("toPiModels excludes models that are known not to support tool calls, since Pi always sends tools", () => {
