@@ -193,7 +193,7 @@ test("a model the participant already chose is never replaced", async () => {
   assert.deepEqual(selected, []);
 });
 
-test("the PowerShell setting is applied only on Windows, once, and only when defaultTools is unset", async () => {
+test("the PowerShell setting is applied only on Windows, and only once", async () => {
   const { mkdtempSync, readFileSync: read } = await import("node:fs");
   const { tmpdir } = await import("node:os");
   const { join } = await import("node:path");
@@ -204,7 +204,7 @@ test("the PowerShell setting is applied only on Windows, once, and only when def
   const { handlers } = await loadExtension({ platform: "win32", env: { PI_CODING_AGENT_DIR: agentDir } });
   const first = sessionContext();
   await handlers.session_start[0]({ type: "session_start", reason: "startup" }, first);
-  assert.deepEqual(JSON.parse(read(join(agentDir, "settings.json"), "utf8")).defaultTools, ["read", "powershell", "edit", "write"]);
+  assert.deepEqual(JSON.parse(read(join(agentDir, "settings.json"), "utf8")).defaultTools, ["-bash", "+powershell"]);
   assert.match(first.notes[0].message, /enabled Pi's PowerShell tool/);
 
   const second = sessionContext();

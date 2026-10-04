@@ -42,7 +42,7 @@ Adds CUNY AI Lab to [Pi](https://pi.dev): the lab's models through the CUNY AI L
 * **Web search and page reading** from [pi-web-access](https://www.npmjs.com/package/pi-web-access): `web_search`, `fetch_content`, `get_search_content` and `source_check`. Search uses Exa's free service and needs no key. Many searches sent at the same moment from one network can be refused briefly; Pi can simply search again.
 * **Questions from Pi** through [pi-ask-user](https://www.npmjs.com/package/pi-ask-user): the `ask_user` tool lets Pi ask you to choose between options before it goes ahead.
 * **`/cail`**, a health check for your setup.
-* **On Windows**, Pi's PowerShell tool is turned on by setting `defaultTools` to `["read", "powershell", "edit", "write"]` in `%USERPROFILE%\.pi\agent\settings.json`, unless you already set `defaultTools` yourself. A backup of the previous file is kept next to it. Run `/reload` to use the tool in the session where it was turned on.
+* **On Windows**, Pi's PowerShell tool is turned on in `%USERPROFILE%\.pi\agent\settings.json`. With no `defaultTools` set, it becomes `["-bash", "+powershell"]`, so the model uses PowerShell in place of bash and keeps Pi's other default tools. A tool list you chose yourself gets `"+powershell"` added, unless it already names `powershell` (including `"-powershell"`). A backup of the previous file is kept next to it. Run `/reload` to use the tool in the session where it was turned on.
 
 ## Troubleshooting
 
@@ -61,7 +61,7 @@ Pi lists them once a key is saved. If `/cail` says the key is valid but the list
 Pi's installer removes its PowerShell launcher when the execution policy would block it, so `pi` runs `pi.cmd`. If the policy changed after installing, type `pi.cmd` instead of `pi`. There is no need to change the execution policy.
 
 **Coming from the earlier setup**
-Earlier versions installed through `npx @cuny-ai-lab/cail-pi` and LazyPi. That installer is gone. To keep Pi lean, list your packages with `pi list` and remove the ones you do not use with `pi remove <source>`. Remove any hand-written `cail` provider from `~/.pi/agent/models.json` and any `~/.pi/agent/extensions/cail.ts`, since the package registers the same provider. The deprecated `npm:@cuny-ai-lab/pi-workshop` package also registers it; remove it with `pi remove npm:@cuny-ai-lab/pi-workshop`.
+Versions up to 0.3.0 installed through `npx @cuny-ai-lab/cail-pi` and LazyPi. That installer is gone. To keep Pi lean, list your packages with `pi list` and remove the ones you do not use with `pi remove <source>`. Remove any hand-written `cail` provider from `~/.pi/agent/models.json` and any `~/.pi/agent/extensions/cail.ts`, since the package registers the same provider. The deprecated `npm:@cuny-ai-lab/pi-workshop` package also registers it; remove it with `pi remove npm:@cuny-ai-lab/pi-workshop`.
 
 ## Privacy and security
 

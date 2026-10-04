@@ -1,6 +1,6 @@
 # CUNY AI Lab × Pi Workshop Installer
 
-> **Historical.** This is the specification for the `npx @cuny-ai-lab/cail-pi` installer (0.1–0.2), which was replaced by a Pi package installed with `pi install npm:@cuny-ai-lab/cail-pi`. The README describes the current design.
+> **Historical.** This is the specification for the `npx @cuny-ai-lab/cail-pi` installer (0.1–0.3), which was replaced by a Pi package installed with `pi install npm:@cuny-ai-lab/cail-pi`. The README describes the current design.
 
 ## Objective
 
