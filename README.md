@@ -18,7 +18,7 @@ Adds CUNY AI Lab to [Pi](https://pi.dev): the lab's models through the CUNY AI L
    irm https://pi.dev/install.ps1 | iex
    ```
 
-   Press Enter to accept Pi's suggestions. It installs Node.js too when your computer needs it.
+   Press Enter to accept Pi's suggestions. It installs Node.js too when your computer needs it. When it asks "Start pi now?", type `n`: the next step runs in the terminal, not inside Pi. If it says your shell is not using the new install yet, open a new terminal window.
 
 2. Add the CUNY AI Lab package:
 
