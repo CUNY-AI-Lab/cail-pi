@@ -1,6 +1,6 @@
 # CUNY AI Lab × Pi
 
-Adds CUNY AI Lab to [Pi](https://pi.dev): the lab's models through the CUNY AI Lab Gateway, web search and page reading, and a way for Pi to ask you questions. You need a CUNY AI Lab account with model access.
+Adds CUNY AI Lab to [Pi](https://pi.dev): the lab's models through the CUNY AI Lab Gateway, and sign-in with your CUNY account. You need a CUNY AI Lab account with model access.
 
 ## Set up
 
@@ -40,11 +40,19 @@ Adds CUNY AI Lab to [Pi](https://pi.dev): the lab's models through the CUNY AI L
 
    You can also choose **Sign in with an API key** and paste a personal key from [Model access](https://tools.ailab.gc.cuny.edu/model-access).
 
+4. Optional: add web search and questions from Pi. Quit Pi first (type `/quit`), then run:
+
+   ```text
+   pi install npm:pi-web-access
+   pi install npm:pi-ask-user
+   ```
+
+   [pi-web-access](https://www.npmjs.com/package/pi-web-access) lets Pi search the web and read pages. Search uses Exa's free service and needs no key; many searches sent at the same moment from one network can be refused briefly, and Pi can simply search again. [pi-ask-user](https://www.npmjs.com/package/pi-ask-user) lets Pi ask you to choose between options before it goes ahead. Both are community packages, separate from this one; if you already have them, skip this step.
+
 ## What you get
 
 * **CUNY AI Lab models**, listed live from the gateway, so new models appear without updating anything. Choose one with `/model`. Sessions start on the newest DeepSeek Flash unless you have saved a default model yourself (`Ctrl+S` in `/model`).
-* **Web search and page reading** from [pi-web-access](https://www.npmjs.com/package/pi-web-access): `web_search`, `fetch_content`, `get_search_content` and `source_check`. Search uses Exa's free service and needs no key. Many searches sent at the same moment from one network can be refused briefly; Pi can simply search again.
-* **Questions from Pi** through [pi-ask-user](https://www.npmjs.com/package/pi-ask-user): the `ask_user` tool lets Pi ask you to choose between options before it goes ahead.
+* **Sign in with CUNY AI Lab** in `/login`, or a personal API key.
 * **`/cail`**, a health check for your setup.
 * **On Windows**, Pi's PowerShell tool is turned on in `%USERPROFILE%\.pi\agent\settings.json`. With no `defaultTools` set, it becomes `["-bash", "+powershell"]`, so the model uses PowerShell in place of bash and keeps Pi's other default tools. A tool list you chose yourself gets `"+powershell"` added, unless it already names `powershell` (including `"-powershell"`). A backup of the previous file is kept next to it. Run `/reload` to use the tool in the session where it was turned on.
 
@@ -71,14 +79,14 @@ Pi lists them once a key is saved. If `/cail` says the key is valid but the list
 Pi's installer removes its PowerShell launcher when the execution policy would block it, so `pi` runs `pi.cmd`. If the policy changed after installing, type `pi.cmd` instead of `pi`. There is no need to change the execution policy.
 
 **Coming from the earlier setup**
-Versions up to 0.3.0 installed through `npx @cuny-ai-lab/cail-pi` and LazyPi. That installer is gone. To keep Pi lean, list your packages with `pi list` and remove the ones you do not use with `pi remove <source>`. Remove any hand-written `cail` provider from `~/.pi/agent/models.json` and any `~/.pi/agent/extensions/cail.ts`, since the package registers the same provider. The deprecated `npm:@cuny-ai-lab/pi-workshop` package also registers it; remove it with `pi remove npm:@cuny-ai-lab/pi-workshop`.
+Versions up to 0.3.0 were set up with `npx @cuny-ai-lab/cail-pi`, which also ran LazyPi. That installer is gone, and the `npx` command no longer works. Run `pi update --all` to move to this version. Your saved key, your settings and the packages LazyPi installed, web search and `ask_user` among them, stay as they are. Remove any hand-written `cail` provider from `~/.pi/agent/models.json` and any `~/.pi/agent/extensions/cail.ts`, since the package registers the same provider. The deprecated `npm:@cuny-ai-lab/pi-workshop` package also registers it; remove it with `pi remove npm:@cuny-ai-lab/pi-workshop`.
 
 ## Privacy and security
 
 * Signing in creates a personal key for this computer, named "Pi on" and the computer's name, that expires after 180 days. It is listed in [Model access](https://tools.ailab.gc.cuny.edu/model-access), where you can revoke it. Signing in again from the same computer replaces that key; a key you pasted yourself is never replaced.
 * Pi stores your key when you run `/login`, in `~/.pi/agent/auth.json` with owner-only permissions on macOS and Linux.
 * The CUNY AI Lab extension sends your key only to the CUNY AI Lab gateway: with every model request, and to check it when you run `/cail`.
-* Web searches go to Exa. Pages are fetched directly from your computer.
+* If you add pi-web-access, its searches go to Exa and pages are fetched directly from your computer.
 * Advanced users can set `AILAB_API_KEY` instead of running `/login`.
 
 ## Updates and removal
@@ -105,7 +113,7 @@ test/                 node:test suites with a mocked gateway; test/live for the 
                       test/smoke installs the packed package into a clean Pi and runs pi -p
 ```
 
-`pi-ask-user` and `pi-web-access` are exact-version `dependencies`, listed in `bundleDependencies` so they ship inside this package's tarball, and loaded through the `pi` manifest's `node_modules/...` paths. Pi's [package documentation](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/packages.md) requires that form for Pi packages used as dependencies. Their versions change only when this package is released; read their changelogs before raising them. `.npmrc` sets `legacy-peer-deps` so their peer dependencies, which Pi provides, are never installed or bundled.
+The package has no runtime dependencies. Web search and `ask_user` stay in the separate `pi-web-access` and `pi-ask-user` packages rather than inside this one. Pi's [package documentation](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/packages.md) requires another Pi package used as a dependency to be bundled in the tarball, and Pi refuses to start when two loaded extensions register the same tool. A bundled copy would therefore stop Pi for anyone who also installed those packages, as LazyPi does by default.
 
 ### How it fits Pi
 
@@ -123,7 +131,7 @@ npm install
 npm test                 # unit tests, mocked gateway
 CAIL_LIVE_TEST_KEY=... npm run test:live   # optional, real gateway
 npm run test:smoke       # packed package in a clean Pi profile, one pi -p call
-npm pack --dry-run       # review the published files and bundled packages
+npm pack --dry-run       # review the published files
 ```
 
 Try a build in an isolated Pi profile without touching your own. Install it from an unpacked tarball rather than from the checkout, whose `node_modules` also holds the development copy of `@earendil-works/pi-ai`:
@@ -144,4 +152,4 @@ npm version patch        # or minor; commits the bump and tags vX.Y.Z
 git push --follow-tags
 ```
 
-The tag starts the `publish` job in `.github/workflows/ci.yml`. It waits for the unit suite and the `pi -p` smoke test to pass on Linux, macOS and Windows, checks that the tag matches the `package.json` version, and publishes with provenance. The trusted publisher on npmjs.com is tied to that workflow filename, so renaming the file breaks publishing until the npm setting is updated. `files` in `package.json` limits our own files to `extensions`, `src`, `README.md` and `LICENSE`; the bundled packages are added by `bundleDependencies`.
+The tag starts the `publish` job in `.github/workflows/ci.yml`. It waits for the unit suite and the `pi -p` smoke test to pass on Linux, macOS and Windows, checks that the tag matches the `package.json` version, and publishes with provenance. The trusted publisher on npmjs.com is tied to that workflow filename, so renaming the file breaks publishing until the npm setting is updated. `files` in `package.json` limits the published files to `extensions`, `src`, `README.md` and `LICENSE`.
