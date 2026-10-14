@@ -10,7 +10,10 @@
  * Only text-generation models that accept tool calls are offered, because Pi
  * sends its tools on every request. Speech and sunset models are dropped.
  *
- * Pure functions, no I/O. Shared by the Pi extension and the bootstrapper.
+ * The newest DeepSeek Flash is listed first. With no saved default, Pi starts
+ * on the first available model of a provider it has no built-in default for.
+ *
+ * Pure functions, no I/O.
  */
 export const CAIL_PROVIDER_ID = "cail";
 export const CAIL_PROVIDER_NAME = "CUNY AI Lab";
@@ -108,10 +111,33 @@ export function toPiModel(entry, { baseUrl = CAIL_BASE_URL } = {}) {
   };
 }
 
+const DEEPSEEK_FLASH = /^deepseek-v(\d+(?:\.\d+)?)-flash(?:-(\d+))?$/i;
+
+/**
+ * The newest DeepSeek Flash among Pi models, or undefined. Newer means a
+ * higher version (v4 before v5), then a higher release suffix (0731 before 1015).
+ */
+export function newestDeepSeekFlash(models) {
+  let best;
+  let bestRank;
+  for (const model of models) {
+    const match = DEEPSEEK_FLASH.exec(model.id);
+    if (!match) continue;
+    const rank = [Number(match[1]), Number(match[2] ?? 0)];
+    if (!best || rank[0] > bestRank[0] || (rank[0] === bestRank[0] && rank[1] > bestRank[1])) {
+      best = model;
+      bestRank = rank;
+    }
+  }
+  return best;
+}
+
 /** Convert a raw `/v1/models` payload into Pi models. Throws CatalogError when the whole payload is malformed. */
 export function toPiModels(payload, options = {}) {
   const now = options.now ?? Date.now();
-  return parseCatalog(payload)
+  const models = parseCatalog(payload)
     .filter((entry) => isTextGeneration(entry) && supportsTools(entry) && !isRetired(entry, now))
     .map((entry) => toPiModel(entry, options));
+  const preferred = newestDeepSeekFlash(models);
+  return preferred ? [preferred, ...models.filter((model) => model !== preferred)] : models;
 }

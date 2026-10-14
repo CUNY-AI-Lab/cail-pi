@@ -1,14 +1,10 @@
 {
   "name": "@cuny-ai-lab/cail-pi",
-  "version": "0.3.0",
-  "description": "CUNY AI Lab workshop setup and model provider for Pi",
+  "version": "0.4.0",
+  "description": "CUNY AI Lab models and sign-in for Pi",
   "type": "module",
   "license": "MIT",
-  "bin": {
-    "cail-pi": "bin/setup.mjs"
-  },
   "files": [
-    "bin",
     "extensions",
     "src",
     "README.md",
@@ -32,10 +28,8 @@
   "scripts": {
     "test": "node --test --test-reporter=spec \"test/**/*.test.mjs\" \"test/**/*.test.ts\"",
     "test:live": "CAIL_LIVE_TEST=1 node --test test/live/*.test.mjs",
+    "test:smoke": "node --test --test-reporter=spec test/smoke/pi-smoke.mjs",
     "pack:check": "npm pack --dry-run"
-  },
-  "dependencies": {
-    "@inquirer/prompts": "^8.7.2"
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",
@@ -50,7 +44,8 @@
     }
   },
   "devDependencies": {
-    "@earendil-works/pi-ai": "^1.0.0"
+    "@earendil-works/pi-ai": "^1.0.2",
+    "@earendil-works/pi-coding-agent": "^1.0.2"
   },
   "publishConfig": {
     "access": "public"

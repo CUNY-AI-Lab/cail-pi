@@ -1,218 +1,99 @@
 # CUNY AI Lab × Pi
 
-Set up [Pi](https://pi.dev) for the CUNY AI Lab workshop.
+Adds CUNY AI Lab to [Pi](https://pi.dev): the lab's models through the CUNY AI Lab Gateway, and sign-in with your CUNY account. You need a CUNY AI Lab account with model access.
 
-## Windows PowerShell
+## Set up
 
-```powershell
-npx.cmd @cuny-ai-lab/cail-pi
-```
+1. Install Pi with Pi's own installer.
 
-## macOS / Linux
+   macOS or Linux:
 
-```bash
-npx @cuny-ai-lab/cail-pi
-```
-
-The installer will:
-
-* set up Pi through LazyPi, and update Pi to 1.0 or newer if an older version is installed
-* install the CUNY AI Lab provider
-* ask for your CUNY AI Lab API key (your typing is hidden)
-* verify the key
-* store it securely in Pi
-* load the CUNY AI Lab models
-
-Then start Pi:
-
-```text
-pi
-```
-
-and type:
-
-```text
-/model
-```
-
-and choose a CUNY AI Lab model.
-
----
-
-## Prerequisites
-
-You need Node.js **22.19.0 or newer**. Check with:
-
-```text
-node --version
-```
-
-### Windows
-
-If Node is missing, open PowerShell and run:
-
-```powershell
-winget install OpenJS.NodeJS.LTS
-```
-
-Then **close PowerShell and open a new PowerShell window** before running the installer.
-
-You do not need WSL, Git Bash, administrator rights, or any change to the PowerShell execution policy.
-
-### macOS
-
-Install Node.js from [nodejs.org](https://nodejs.org) (or with Homebrew or nvm if you already use them). The installer works with any of them.
-
-### Linux
-
-Install Node.js 22.19 or newer with your distribution's package manager, [nvm](https://github.com/nvm-sh/nvm), or the official binaries.
-
-## Step by step (Windows)
-
-1. Open PowerShell and check Node:
-
-   ```powershell
-   node --version
+   ```bash
+   curl -fsSL https://pi.dev/install.sh | sh
    ```
 
-2. Run the workshop setup:
+   Windows PowerShell:
 
    ```powershell
-   npx.cmd @cuny-ai-lab/cail-pi
+   irm https://pi.dev/install.ps1 | iex
    ```
 
-   LazyPi will offer to install Pi and a curated set of packages. Accept the defaults.
+   Press Enter to accept Pi's suggestions. It installs Node.js too when your computer needs it. When it asks "Start pi now?", type `n`: the next step runs in the terminal, not inside Pi. If it says your shell is not using the new install yet, open a new terminal window.
 
-   When you see `CUNY AI Lab API key:`, paste the key you were given. The characters stay hidden.
+2. Add the CUNY AI Lab package:
 
-3. Start Pi:
-
-   ```powershell
-   pi.cmd
+   ```text
+   pi install npm:@cuny-ai-lab/cail-pi
    ```
 
-4. Inside Pi, type `/model` and pick a CUNY AI Lab model.
+3. Start Pi and sign in:
 
-No `/login` is needed. Setup already stored your key in Pi.
+   ```text
+   pi
+   ```
 
-## Step by step (macOS / Linux)
+   Type `/login cail` and choose **Sign in with CUNY AI Lab**. Your browser opens the lab's sign-in page. Sign in with CUNY Login, click **Connect Pi**, and return to Pi.
 
-```bash
-node --version
-npx @cuny-ai-lab/cail-pi
-pi
-```
+   Pi then reports that it logged in "but no default model is configured for provider "cail"". That message is expected. Type your first message and Pi answers with DeepSeek V4 Flash.
 
-Then `/model` inside Pi.
+   Working on another computer over SSH? Pi shows a link instead of opening a browser. Open the link on any computer, click **Connect Pi**, and paste the code it shows into Pi.
 
-## Already have Pi?
+   You can also choose **Sign in with an API key** and paste a personal key from [Model access](https://tools.ailab.gc.cuny.edu/model-access).
 
-Update Pi and every Pi package, including this one, with Pi's own updater:
+4. Optional: add web search and questions from Pi. Quit Pi first (type `/quit`), then run:
 
-```bash
-pi update --all          # macOS / Linux
-```
+   ```text
+   pi install npm:pi-web-access
+   pi install npm:pi-ask-user
+   ```
 
-```powershell
-pi.cmd update --all      # Windows
-```
+   [pi-web-access](https://www.npmjs.com/package/pi-web-access) lets Pi search the web and read pages. Search uses Exa's free service and needs no key; many searches sent at the same moment from one network can be refused briefly, and Pi can simply search again. [pi-ask-user](https://www.npmjs.com/package/pi-ask-user) lets Pi ask you to choose between options before it goes ahead. Both are community packages, separate from this one; if you already have them, skip this step.
 
-Close any open Pi sessions first. Your saved key and settings are kept.
+## What you get
 
-Running the installer again is also safe. It updates Pi if it is older than 1.0, updates the CUNY AI Lab package, and asks whether to keep the key you already saved (default: yes). Useful flags:
-
-| Flag | Effect |
-| --- | --- |
-| `--skip-lazypi` | Do not run LazyPi. Pi must already be installed. |
-| `--skip-auth` | Install the provider without asking for a key. Use `/login` in Pi later. |
-| `--replace-key` | Ask for a new key even if one is already saved. |
-| `--no-windows-settings` | Do not enable Pi's PowerShell tool on Windows. |
-| `--doctor` | Check this computer without changing anything. |
-| `--uninstall` | Remove the CUNY AI Lab package from Pi. |
+* **CUNY AI Lab models**, listed live from the gateway, so new models appear without updating anything. Choose one with `/model`. Sessions start on the newest DeepSeek Flash unless you have saved a default model yourself (`Ctrl+S` in `/model`).
+* **Sign in with CUNY AI Lab** in `/login`, or a personal API key.
+* **`/cail`**, a health check for your setup.
+* **On Windows**, Pi's PowerShell tool is turned on in `%USERPROFILE%\.pi\agent\settings.json`. With no `defaultTools` set, it becomes `["-bash", "+powershell"]`, so the model uses PowerShell in place of bash and keeps Pi's other default tools. A tool list you chose yourself gets `"+powershell"` added, unless it already names `powershell` (including `"-powershell"`). A backup of the previous file is kept next to it. Run `/reload` to use the tool in the session where it was turned on.
 
 ## Troubleshooting
 
-Run the health check first:
+Type `/cail` inside Pi. It reports whether the gateway is reachable, whether your key is saved and accepted, how many CUNY AI Lab models you can use, which model is active, and on Windows whether the PowerShell tool is on. It never shows your key.
 
-```powershell
-npx.cmd @cuny-ai-lab/cail-pi --doctor     # Windows
-```
+**"No API key found for the selected model"**
+Run `/login cail` and sign in, as in step 3.
 
-```bash
-npx @cuny-ai-lab/cail-pi --doctor         # macOS / Linux
-```
+**"Your CUNY AI Lab sign-in has expired"**
+Keys from signing in last 180 days. Type `/login cail` and sign in again.
 
-It reports platform, Node, npm, Pi, the CUNY AI Lab extension, whether a key is saved, whether the gateway is reachable, whether the saved key is accepted, how many models are available, and (on Windows) whether Pi's PowerShell tool is enabled. It never prints the key.
+**"Your CUNY AI Lab access is not active yet"**
+Signing in works only for accounts with lab model access. Open [Model access](https://tools.ailab.gc.cuny.edu/model-access) to see how to request it.
 
-**"requires Node.js 22.19.0 or newer"**
-The message shows which `node` executable ran. If you have several (nvm, Homebrew, conda, winget), switch to a current one and run the installer again.
-
-**"That API key was not accepted"**
-Check for missing or extra characters and paste it again. Keys are individual; use the one issued to you.
-
-**"The CUNY AI Lab service could not be reached"**
-Your key was not saved. Check your network (VPN, captive portal, firewall) and choose Retry.
+**"That API key was not accepted"** (in `/cail`)
+Check for missing or extra characters and run `/login` again. Keys are individual; use the one issued to you.
 
 **No CUNY AI Lab models in `/model`**
-Pi refreshes the catalog when it starts. If the list stays empty, run `--doctor`. If `--doctor` says the credential is not configured, run `/login` inside Pi and choose "CUNY AI Lab".
+Pi lists them once a key is saved. If `/cail` says the key is valid but the list stays empty, restart Pi.
 
-**PowerShell says scripts are disabled**
-Use the `.cmd` forms: `npx.cmd`, `npm.cmd`, `pi.cmd`. There is no need to change the execution policy.
+**Windows: "running scripts is disabled on this system"**
+Pi's installer removes its PowerShell launcher when the execution policy would block it, so `pi` runs `pi.cmd`. If the policy changed after installing, type `pi.cmd` instead of `pi`. There is no need to change the execution policy.
 
-**Windows: `pi` is not recognized after LazyPi**
-Close the window and open a new PowerShell window so it picks up the updated PATH, then run `pi.cmd`.
-
-**Warnings about other extensions after updating to Pi 1.0**
-Pi 1.0 prints warnings when it starts if some community packages installed by LazyPi declare Pi's modules the old way (`Host-provided extension packages must be declared in peerDependencies`), or when `pi-mcp-adapter` replaces Pi's new built-in MCP support. They come from those packages, not from CUNY AI Lab, and Pi still works. Pi turns off its built-in MCP by itself while `pi-mcp-adapter` is installed.
-
-**A hand-written `extensions/cail.ts` from an earlier setup**
-`--doctor` warns if one exists. Delete it once the package works, otherwise the provider is registered twice.
-
-## Windows notes
-
-* The installer, LazyPi, and Pi all run natively in Windows PowerShell 5.1 and PowerShell 7.
-* On Windows the installer enables Pi's built-in `powershell` tool in `%USERPROFILE%\.pi\agent\settings.json`. Without a `defaultTools` setting it writes `["-bash", "+powershell"]`, which swaps the model's Bash tool for PowerShell and keeps Pi's other default tools. If you already chose a tool list, it appends `"+powershell"` and leaves your entries alone; a list that already mentions `powershell`, including `"-powershell"`, is not touched. A backup of the previous settings file is written next to it.
-* Nothing is written to your PowerShell profile and the execution policy is never changed.
+**Coming from the earlier setup**
+Versions up to 0.3.0 were set up with `npx @cuny-ai-lab/cail-pi`, which also ran LazyPi. That installer is gone, and the `npx` command no longer works. Run `pi update --all` to move to this version. Your saved key, your settings and the packages LazyPi installed, web search and `ask_user` among them, stay as they are. Remove any hand-written `cail` provider from `~/.pi/agent/models.json` and any `~/.pi/agent/extensions/cail.ts`, since the package registers the same provider. The deprecated `npm:@cuny-ai-lab/pi-workshop` package also registers it; remove it with `pi remove npm:@cuny-ai-lab/pi-workshop`.
 
 ## Privacy and security
 
-* Your API key is entered only at a hidden prompt. It is never accepted on the command line, so it never lands in Bash, zsh, or PowerShell history.
-* The key is sent to exactly two places: the CUNY AI Lab gateway (to verify it) and Pi's credential store on this computer (`~/.pi/agent/auth.json`, created with owner-only permissions on macOS and Linux).
-* The key is never written to `settings.json`, `models.json`, shell profiles, logs, or error messages, and `--doctor` never shows it.
-* This package sends no telemetry.
-* Keys are individual. Do not share yours; CUNY AI Lab can revoke and reissue keys.
+* Signing in creates a personal key for this computer, named "Pi on" and the computer's name, that expires after 180 days. It is listed in [Model access](https://tools.ailab.gc.cuny.edu/model-access), where you can revoke it. Signing in again from the same computer replaces that key; a key you pasted yourself is never replaced.
+* Pi stores your key when you run `/login`, in `~/.pi/agent/auth.json` with owner-only permissions on macOS and Linux.
+* The CUNY AI Lab extension sends your key only to the CUNY AI Lab gateway: with every model request, and to check it when you run `/cail`.
+* If you add pi-web-access, its searches go to Exa and pages are fetched directly from your computer.
+* Advanced users can set `AILAB_API_KEY` instead of running `/login`.
 
-Advanced users may instead set the `AILAB_API_KEY` environment variable; the provider reads it when no key is stored in Pi. That is not the workshop flow.
+## Updates and removal
 
-## Updates
+Update the package with `pi update npm:@cuny-ai-lab/cail-pi`, and update Pi itself with `pi update`.
 
-The list of CUNY AI Lab models comes live from the gateway each time Pi starts, so new models appear without updating anything.
-
-Update Pi and all packages, including this one, with `pi update --all` (`pi.cmd update --all` on Windows), or update only this package with:
-
-```text
-pi update npm:@cuny-ai-lab/cail-pi
-```
-
-or re-run the installer. This package needs Pi 1.0 or newer; the installer updates an older Pi through `pi update --self`, and `--doctor` flags one.
-
-### Renamed from `@cuny-ai-lab/pi-workshop`
-
-This package was first published as `@cuny-ai-lab/pi-workshop`. If you installed that one, run the installer above once: it installs `@cuny-ai-lab/cail-pi` and removes the old package, so the CUNY AI Lab provider is not loaded twice. Your saved key is kept.
-
-## Uninstall
-
-```text
-pi remove npm:@cuny-ai-lab/cail-pi
-```
-
-Windows:
-
-```powershell
-pi.cmd remove npm:@cuny-ai-lab/cail-pi
-```
-
-This removes only this package. Your other Pi packages are untouched, and **your saved CUNY AI Lab key is kept** in Pi's credential store. To remove the key too, run the installer with `--uninstall`; it asks `Remove your saved CUNY AI Lab API key from Pi? [y/N]` (default: no). You can also remove it from inside Pi with `/logout`.
+Remove the package with `pi remove npm:@cuny-ai-lab/cail-pi`. Your key stays in Pi until you run `/logout`. Logging out does not revoke the key; revoke it in Model access if you no longer need it.
 
 ---
 
@@ -221,31 +102,27 @@ This removes only this package. Your other Pi packages are untouched, and **your
 ### What the package contains
 
 ```text
-bin/setup.mjs        npx entry point (thin wiring)
-extensions/cail.ts   Pi extension: native "cail" provider with dynamic models
-src/args.mjs         CLI flags
-src/cail-api.mjs     key validation (/v1/quota) and catalog fetch (/v1/models)
-src/cail-catalog.mjs catalog → Pi Model[] mapping (shared with the extension)
-src/credentials.mjs  Pi AuthStorage integration + narrow fallback writer
-src/diagnostics.mjs  --doctor
-src/pi.mjs           pi / npx command wrapper
-src/platform.mjs     .cmd resolution, spawn plans, platform labels
-src/preflight.mjs    Node version check
-src/prompts.mjs      hidden key prompt (@inquirer/prompts password)
-src/settings.mjs     Windows defaultTools merge
-src/setup.mjs        setup orchestrator (all side effects injected)
-test/                node:test suites, mocked gateway; test/live for the real gateway
+extensions/cail.ts    Pi extension: the "cail" provider, the session-start model, the Windows
+                      PowerShell setting and the /cail command
+src/cail-catalog.mjs  gateway catalog → Pi models, newest DeepSeek Flash first
+src/cail-api.mjs      key check (/v1/quota) and catalog fetch (/v1/models)
+src/doctor.mjs        /cail report formatting
+src/signin.mjs        "Sign in with CUNY AI Lab": loopback or copy-code sign-in, PKCE, key exchange
+src/settings.mjs      Windows defaultTools merge
+test/                 node:test suites with a mocked gateway; test/live for the real gateway;
+                      test/smoke installs the packed package into a clean Pi and runs pi -p
 ```
+
+The package has no runtime dependencies. Web search and `ask_user` stay in the separate `pi-web-access` and `pi-ask-user` packages rather than inside this one. Pi's [package documentation](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/packages.md) requires another Pi package used as a dependency to be bundled in the tarball, and Pi refuses to start when two loaded extensions register the same tool. A bundled copy would therefore stop Pi for anyone who also installed those packages, as LazyPi does by default.
 
 ### How it fits Pi
 
-* The provider is a native pi-ai provider built with `createProvider` from `@earendil-works/pi-ai/compat`, using `envApiKeyAuth("CUNY AI Lab API key", ["AILAB_API_KEY"])` and `openAICompletionsApi()`. Pi therefore owns `/login`, `/logout`, credential resolution, streaming, and catalog persistence.
-* Models are discovered from `GET /v1/models`. The gateway response already carries names, capabilities (vision, reasoning), context length, pricing, status, and sunset dates, so there is no static model list in this package. The extension fetches the catalog once at load (public endpoint, 5 s timeout, skipped when `PI_OFFLINE` is set) so `/model` and `pi --list-models` work immediately, and again through `fetchModels` on Pi's normal refreshes.
-* Speech models, sunset models, and models whose catalog entry lacks `function-calling` are filtered out: Pi sends its tools with every request and the gateway rejects tool calls to such models (`capability_unsupported`). Models with no capability information are still offered, with conservative defaults (text only, no reasoning, 128K context, 16K output).
-* Key validation calls `GET /v1/quota`, which requires a valid bearer credential and performs no inference. `/v1/models` is public on the gateway and cannot validate a key.
-* The extension imports from `@earendil-works/pi-ai/compat`. Pi's extension loader aliases only the root, `/compat`, `/oauth`, and `/providers/all` entry points, and in Pi 1.0 only `/compat` exports `openAICompletionsApi`. Pi's own 1.0 provider examples import from `/compat` too.
-* The Windows tool setting relies on Pi's `+name` / `-name` `defaultTools` entries (Pi 0.99+), which is why the installer requires Pi 1.0 (`MIN_PI_VERSION` in `src/pi.mjs`) and runs `pi update --self` on older installs.
-* Credentials are stored through Pi's own `AuthStorage`, dynamically imported from the installed `@earendil-works/pi-coding-agent` (found via `npm root -g` or the `pi` executable), so no second copy of Pi is bundled. If that import is unavailable, a narrow writer with the same `auth.json` schema is used: atomic write, backup, owner-only permissions, other providers preserved, malformed JSON refused.
+* The provider is a native pi-ai provider built with `createProvider` from `@earendil-works/pi-ai/compat`, using `envApiKeyAuth("CUNY AI Lab API key", ["AILAB_API_KEY"])`, an OAuth sign-in, and `openAICompletionsApi()`. Pi owns `/login`, `/logout`, credential storage, streaming and catalog persistence.
+* Sign-in follows the lab's connect flow, documented in the Model Access API README. Pi opens `/model-access/connect` with a PKCE challenge and, on its own computer, a `127.0.0.1` callback; over SSH (`SSH_CONNECTION`, `SSH_CLIENT` or `SSH_TTY` set) it asks for the code the page shows. It trades the code at `/model-access/v1/connect/token` for an ordinary personal key and stores it as an OAuth credential whose expiry is the key's. When Pi's stored `cail` credential came from an earlier sign-in, the exchange names that key so the lab replaces it. An expired credential cannot be refreshed; Pi reports that the participant should sign in again.
+* Models come from `GET /v1/models`. The response carries names, capabilities, context length, pricing, status and sunset dates, so the package has no static model list. The extension fetches the catalog once at load (public endpoint, 5 s timeout, skipped when `PI_OFFLINE` is set) and again through `fetchModels` on Pi's refreshes.
+* Speech models, sunset models, and models whose catalog entry lacks `function-calling` are dropped, because Pi sends its tools with every request and the gateway rejects tool calls to such models. Models with no capability information are offered with conservative defaults.
+* With no saved default, Pi starts on the first available model of a provider it has no built-in default for, so the catalog lists the newest DeepSeek Flash first. After `/login`, Pi selects no model for such a provider and holds a placeholder model instead; an `input` handler selects the newest DeepSeek Flash for that session when the first message arrives. Neither writes settings, and a saved default always wins.
+* `/cail` checks the key with `GET /v1/quota`, which needs a valid bearer credential and runs no inference.
 
 ### Developing
 
@@ -253,29 +130,26 @@ test/                node:test suites, mocked gateway; test/live for the real ga
 npm install
 npm test                 # unit tests, mocked gateway
 CAIL_LIVE_TEST_KEY=... npm run test:live   # optional, real gateway
-npm pack --dry-run       # review the published file list
+npm run test:smoke       # packed package in a clean Pi profile, one pi -p call
+npm pack --dry-run       # review the published files
 ```
 
-Try the extension in an isolated Pi profile without touching your own:
+Try a build in an isolated Pi profile without touching your own. Install it from an unpacked tarball rather than from the checkout, whose `node_modules` also holds the development copy of `@earendil-works/pi-ai`:
 
 ```bash
-PI_CODING_AGENT_DIR=/tmp/pi-scratch pi install ./
-PI_CODING_AGENT_DIR=/tmp/pi-scratch pi --list-models cail
-```
-
-Run the full installer against an unpublished checkout by pointing it at the local package instead of npm:
-
-```bash
-PI_CODING_AGENT_DIR=/tmp/pi-scratch PI_WORKSHOP_PACKAGE_SOURCE="$PWD" node bin/setup.mjs --skip-lazypi
+npm pack --pack-destination /tmp
+mkdir -p /tmp/cail-pi-build && tar xzf /tmp/cuny-ai-lab-cail-pi-*.tgz -C /tmp/cail-pi-build --strip-components 1
+PI_CODING_AGENT_DIR=/tmp/pi-scratch pi install /tmp/cail-pi-build
+PI_CODING_AGENT_DIR=/tmp/pi-scratch pi
 ```
 
 ### Publishing
 
-Releases are published by GitHub Actions through npm trusted publishing, so no npm token exists and nobody publishes from their own machine. After the manual acceptance scenarios in `SPEC.md` §38 have been run, bump the version and push the tag from `main`:
+Releases are published by GitHub Actions through npm trusted publishing, so no npm token exists and nobody publishes from their own machine. After testing a build in a clean Pi profile on macOS and Windows, bump the version and push the tag from `main`:
 
 ```bash
 npm version patch        # or minor; commits the bump and tags vX.Y.Z
 git push --follow-tags
 ```
 
-The tag starts the `publish` job in `.github/workflows/ci.yml`. It waits for the unit suite to pass on Linux, macOS, and Windows, checks that the tag matches the `package.json` version, and publishes with provenance. The trusted publisher on npmjs.com is tied to that workflow filename, so renaming the file breaks publishing until the npm setting is updated. `files` in `package.json` limits the tarball to `bin`, `extensions`, `src`, `README.md`, and `LICENSE`.
+The tag starts the `publish` job in `.github/workflows/ci.yml`. It waits for the unit suite and the `pi -p` smoke test to pass on Linux, macOS and Windows, checks that the tag matches the `package.json` version, and publishes with provenance. The trusted publisher on npmjs.com is tied to that workflow filename, so renaming the file breaks publishing until the npm setting is updated. `files` in `package.json` limits the published files to `extensions`, `src`, `README.md` and `LICENSE`.
