@@ -132,7 +132,7 @@ Use the current Earendil Pi ecosystem:
 Minimum supported Node:
 
 ```text
-22.19.0
+22.23.4
 ```
 
 CAIL OpenAI-compatible API:
@@ -189,7 +189,7 @@ Start with approximately:
     "LICENSE"
   ],
   "engines": {
-    "node": ">=22.19.0"
+    "node": ">=22.23.4"
   },
   "keywords": [
     "pi-package",
@@ -749,7 +749,7 @@ Avoid concatenated shell commands.
 Require:
 
 ```text
-Node >=22.19.0
+Node >=22.23.4
 ```
 
 Inspect:
@@ -764,7 +764,7 @@ If unsupported, stop before making changes.
 Example:
 
 ```text
-CUNY AI Lab × Pi requires Node.js 22.19.0 or newer.
+CUNY AI Lab × Pi requires Node.js 22.23.4 or newer.
 
 Detected:
   Node v22.18.0
@@ -1381,7 +1381,7 @@ node --version
 Need:
 
 ```text
-v22.19.0
+v22.23.4
 ```
 
 or newer.
@@ -1612,9 +1612,9 @@ Network failure must not delete an existing credential.
 Verify:
 
 ```text
-22.18.0 → reject
-22.19.0 → accept
-22.19.1 → accept
+22.23.3 → reject
+22.23.4 → accept
+22.24.0 → accept
 23.x → accept
 24.x → accept
 26.x → accept unless Pi itself imposes a newer compatibility restriction
