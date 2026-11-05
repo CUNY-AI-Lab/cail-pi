@@ -23,7 +23,7 @@ Adds CUNY AI Lab to [Pi](https://pi.dev): the lab's models through the CUNY AI L
 2. Add the CUNY AI Lab package:
 
    ```text
-   pi install npm:@cuny-ai-lab/cail-pi
+   pi install npm:@cuny-ai-lab/cail-pi@latest
    ```
 
 3. Start Pi and sign in:
