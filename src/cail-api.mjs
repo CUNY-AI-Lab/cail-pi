@@ -40,6 +40,30 @@ function classifyStatus(status) {
   return "unexpected";
 }
 
+/** Read account allowance without running inference or returning raw error bodies. */
+export async function fetchQuota(apiKey, options = {}) {
+  const key = typeof apiKey === "string" ? apiKey.trim() : "";
+  if (!key) return { ok: false, message: "CAIL sign-in required. Run /login and choose CUNY AI Lab." };
+  const { response, networkError } = await request(`${options.baseUrl ?? CAIL_BASE_URL}/quota`, { ...options, apiKey: key });
+  if (networkError) return { ok: false, message: `CAIL usage unavailable (${describeNetworkFailure(networkError)}). Try /usage again.` };
+  if (!response.ok) {
+    const status = classifyStatus(response.status);
+    const messages = {
+      invalid: "CAIL sign-in was not accepted. Run /login to sign in again.",
+      forbidden: "This CAIL key cannot read usage. Contact CUNY AI Lab.",
+      rate_limited: "Too many requests. Wait a moment, then run /usage again.",
+      server_error: "CAIL usage is temporarily unavailable. Try /usage again later.",
+      unexpected: "CAIL usage unavailable. Try /usage again later.",
+    };
+    return { ok: false, message: messages[status] };
+  }
+  try {
+    return { ok: true, quota: await response.json() };
+  } catch {
+    return { ok: false, message: "CAIL usage unavailable. Try /usage again later." };
+  }
+}
+
 async function request(url, { fetch: fetchImpl = globalThis.fetch, timeoutMs = DEFAULT_TIMEOUT_MS, apiKey, signal } = {}) {
   const headers = { Accept: "application/json" };
   if (apiKey) headers.Authorization = `Bearer ${apiKey}`;

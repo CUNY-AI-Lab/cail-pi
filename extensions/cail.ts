@@ -15,7 +15,8 @@
  */
 import { createProvider, envApiKeyAuth, openAICompletionsApi, type Provider, type RefreshModelsContext } from "@earendil-works/pi-ai/compat";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { checkApiKey, fetchModelCatalog } from "../src/cail-api.mjs";
+import { checkApiKey, fetchModelCatalog, fetchQuota } from "../src/cail-api.mjs";
+import { formatUsageReport } from "../src/usage.mjs";
 import { CAIL_BASE_URL, CAIL_PROVIDER_ID, CAIL_PROVIDER_NAME, CatalogError, newestDeepSeekFlash, toPiModels } from "../src/cail-catalog.mjs";
 import { formatDoctorReport } from "../src/doctor.mjs";
 import { createSignIn } from "../src/signin.mjs";
@@ -160,6 +161,19 @@ export default async function cailExtension(pi: ExtensionAPI, startup: StartupOp
         powershellEnabled: platform === "win32" ? powershellToolEnabled({ env: startup.env }) : undefined,
       });
       ctx.ui.notify(report.text, report.healthy ? "info" : "warning");
+    },
+  });
+
+  pi.registerCommand("usage", {
+    description: "Show CUNY AI Lab account usage and remaining allowance",
+    handler: async (_args, ctx) => {
+      try {
+        const apiKey = await ctx.modelRegistry.getApiKeyForProvider(CAIL_PROVIDER_ID);
+        const report = formatUsageReport(await fetchQuota(apiKey, { fetch: startup.fetch, baseUrl: startup.baseUrl }));
+        ctx.ui.notify(report.text, report.healthy ? "info" : "warning");
+      } catch {
+        ctx.ui.notify("CAIL usage unavailable. Check /login, then retry /usage.", "warning");
+      }
     },
   });
 }

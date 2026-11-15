@@ -16,7 +16,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -70,4 +70,41 @@ test("pi -p loads the packed package and reaches the gateway", { timeout: 300_00
   const prompt = run(process.execPath, [PI_CLI, "-p", "--no-session", "--model", model, "ping"], { env });
   assert.doesNotMatch(prompt.output, /Failed to load extension/);
   assert.match(prompt.output, /"code":"invalid_credential"/);
+
+  // IDE integrations receive slash-command output through RPC notifications.
+  // Exercise the packed extension, without invoking a model or using a real key.
+  const notification = await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [PI_CLI, "--mode", "rpc", "--no-session"], { env, stdio: ["pipe", "pipe", "pipe"] });
+    let buffer = "";
+    let done = false;
+    const finish = (error, value) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      child.kill();
+      error ? reject(error) : resolve(value);
+    };
+    const timer = setTimeout(() => finish(new Error("/usage RPC notification timed out")), 30_000);
+    child.on("error", (error) => finish(error));
+    child.on("exit", (code) => { if (!done) finish(new Error(`Pi RPC exited early (${code})`)); });
+    child.stdin.on("error", (error) => finish(error));
+    child.stderr.resume();
+    child.stdout.on("data", (chunk) => {
+      buffer += chunk.toString();
+      const lines = buffer.split("\n");
+      buffer = lines.pop();
+      for (const line of lines) {
+        let event;
+        try { event = JSON.parse(line); } catch { continue; }
+        if (event.type === "extension_ui_request" && event.method === "notify") finish(null, event);
+        if (event.type === "agent_start") finish(new Error("/usage must not invoke a model"));
+        if (event.type === "response" && event.success === false) finish(new Error("Pi rejected /usage"));
+      }
+    });
+    child.stdin.write(JSON.stringify({ type: "prompt", message: "/usage" }) + "\n");
+  });
+  assert.equal(notification.notifyType, "warning");
+  assert.match(notification.message, /CAIL sign-in was not accepted/);
+  assert.ok(!notification.message.includes(INVALID_KEY));
+
 });

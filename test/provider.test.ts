@@ -225,3 +225,32 @@ test("/cail reports the setup without printing the key", async () => {
   assert.match(ctx.notes[0].message, /Current model: cail\/deepseek-v4-flash-0731/);
   assert.ok(!ctx.notes[0].message.includes(FAKE_KEY));
 });
+
+test('/usage uses CAIL credentials even when another provider is selected', async () => {
+  const fetch = fetchStub((url) => url.endsWith('/quota') ? Response.json({
+    object: 'quota', managed_by: 'cloudflare', state: 'estimated', unit: 'microdollar', currency: 'USD',
+    limit: 10000000, estimated_used: 2500000, estimated_remaining: 7500000,
+    used_percent: 25, remaining_percent: 75, window_seconds: 86400,
+    window_technique: 'fixed', calculated_at: 1794690000,
+  }) : new Response(catalog));
+  const { commands } = await loadExtension({ fetch });
+  const ctx = sessionContext({ model: { provider: 'other', id: 'model' }, modelRegistry: {
+    getApiKeyForProvider: async (provider: string) => { assert.equal(provider, 'cail'); return FAKE_KEY; },
+  } });
+  await commands.usage.handler('', ctx);
+  assert.equal(ctx.notes[0].type, 'info');
+  assert.match(ctx.notes[0].message, /\$2.50/);
+  assert.ok(!ctx.notes[0].message.includes(FAKE_KEY));
+  assert.equal(fetch.calls.filter(call => call.url.endsWith('/quota')).length, 1);
+});
+
+test('/usage prompts for login without a key and contains credential resolution failures', async () => {
+  const { commands } = await loadExtension();
+  for (const resolve of [async () => undefined, async () => { throw new Error(FAKE_KEY); }]) {
+    const ctx = sessionContext({ modelRegistry: { getApiKeyForProvider: resolve } });
+    await commands.usage.handler('', ctx);
+    assert.equal(ctx.notes[0].type, 'warning');
+    assert.match(ctx.notes[0].message, /\/login/);
+    assert.ok(!ctx.notes[0].message.includes(FAKE_KEY));
+  }
+});

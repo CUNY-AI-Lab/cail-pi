@@ -54,11 +54,14 @@ Adds CUNY AI Lab to [Pi](https://pi.dev): the lab's models through the CUNY AI L
 * **CUNY AI Lab models**, listed live from the gateway, so new models appear without updating anything. Choose one with `/model`. Sessions start on the newest DeepSeek Flash unless you have saved a default model yourself (`Ctrl+S` in `/model`).
 * **Sign in with CUNY AI Lab** in `/login`, or a personal API key.
 * **`/cail`**, a health check for your setup.
+* **`/usage`**, your CUNY AI Lab account usage and remaining allowance.
 * **On Windows**, Pi's PowerShell tool is turned on in `%USERPROFILE%\.pi\agent\settings.json`. With no `defaultTools` set, it becomes `["-bash", "+powershell"]`, so the model uses PowerShell in place of bash and keeps Pi's other default tools. A tool list you chose yourself gets `"+powershell"` added, unless it already names `powershell` (including `"-powershell"`). A backup of the previous file is kept next to it. Run `/reload` to use the tool in the session where it was turned on.
 
 ## Troubleshooting
 
 Type `/cail` inside Pi. It reports whether the gateway is reachable, whether your key is saved and accepted, how many CUNY AI Lab models you can use, which model is active, and on Windows whether the PowerShell tool is on. It never shows your key.
+
+Type `/usage` to fetch your account’s current usage estimate from CUNY AI Lab. It shows estimated dollars used, the allowance limit, dollars remaining, and when the estimate was calculated. Fixed allowances show the period start and reset time in UTC; rolling allowances show the window length. This allowance is shared across your account’s keys; it is not a count of tokens or costs for the current Pi session. Estimates may be delayed. The command uses your existing CAIL sign-in even when another provider’s model is selected, and runs no inference.
 
 **"No API key found for the selected model"**
 Run `/login cail` and sign in, as in step 3.
@@ -85,7 +88,7 @@ Versions up to 0.3.0 were set up with `npx @cuny-ai-lab/cail-pi`, which also ran
 
 * Signing in creates a personal key for this computer, named "Pi on" and the computer's name, that expires after 180 days. It is listed in [Model access](https://tools.ailab.gc.cuny.edu/model-access), where you can revoke it. Signing in again from the same computer replaces that key; a key you pasted yourself is never replaced.
 * Pi stores your key when you run `/login`, in `~/.pi/agent/auth.json` with owner-only permissions on macOS and Linux.
-* The CUNY AI Lab extension sends your key only to the CUNY AI Lab gateway: with every model request, and to check it when you run `/cail`.
+* The CUNY AI Lab extension sends your key only to the CUNY AI Lab gateway: with every model request, and to check it when you run `/cail` or `/usage`.
 * If you add pi-web-access, its searches go to Exa and pages are fetched directly from your computer.
 * Advanced users can set `AILAB_API_KEY` instead of running `/login`.
 
@@ -103,10 +106,11 @@ Remove the package with `pi remove npm:@cuny-ai-lab/cail-pi`. Your key stays in 
 
 ```text
 extensions/cail.ts    Pi extension: the "cail" provider, the session-start model, the Windows
-                      PowerShell setting and the /cail command
+                      PowerShell setting and the /cail and /usage commands
 src/cail-catalog.mjs  gateway catalog → Pi models, newest DeepSeek Flash first
 src/cail-api.mjs      key check (/v1/quota) and catalog fetch (/v1/models)
 src/doctor.mjs        /cail report formatting
+src/usage.mjs         /usage account estimate validation and formatting
 src/signin.mjs        "Sign in with CUNY AI Lab": loopback or copy-code sign-in, PKCE, key exchange
 src/settings.mjs      Windows defaultTools merge
 test/                 node:test suites with a mocked gateway; test/live for the real gateway;
