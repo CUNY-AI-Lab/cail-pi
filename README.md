@@ -49,6 +49,8 @@ Adds CUNY AI Lab to [Pi](https://pi.dev): the lab's models through the CUNY AI L
 
    [pi-web-access](https://www.npmjs.com/package/pi-web-access) lets Pi search the web and read pages. Search uses Exa's free service and needs no key; many searches sent at the same moment from one network can be refused briefly, and Pi can simply search again. [pi-ask-user](https://www.npmjs.com/package/pi-ask-user) lets Pi ask you to choose between options before it goes ahead. Both are community packages, separate from this one; if you already have them, skip this step.
 
+Already use Claude Code, Codex or Cursor? [Coming from other coding agents](docs/coming-from-other-agents.md) explains how instruction files, skills, commands and MCP servers carry over to Pi.
+
 ## What you get
 
 * **CUNY AI Lab models**, listed live from the gateway, so new models appear without updating anything. Choose one with `/model`. Sessions start on the newest DeepSeek Flash unless you have saved a default model yourself (`Ctrl+S` in `/model`).
