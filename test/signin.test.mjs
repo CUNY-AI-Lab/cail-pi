@@ -104,7 +104,7 @@ test("the exchange sends the code, verifier and key to replace, and stores the k
   assert.equal(lab.calls[0].init.headers["content-type"], "application/json");
 });
 
-test("exchange failures carry the Lab's message and never the key", async () => {
+test("exchange failures use local messages and never the key", async () => {
   const refused = labStub(() => Response.json({ error: "invalid_grant", message: "This sign-in code is no longer valid. Sign in again from the app." }, { status: 400 }));
   await assert.rejects(exchangeCode({ code: CODE, verifier: "v".repeat(43), fetch: refused }), /no longer valid/);
   const notAdmitted = labStub(() => Response.json({ error: { code: "admission_required", message: "Your CUNY AI Lab access is not active yet." } }, { status: 403 }));
@@ -137,7 +137,7 @@ test("on this computer, approving in the browser finishes sign-in through the lo
 
   const browser = await fetch(`${redirect.href}?code=${CODE}&state=${state}`);
   assert.equal(browser.status, 200);
-  assert.match(await browser.text(), /Pi is connected/);
+  assert.match(await browser.text(), /Sign-in approved/);
   assert.deepEqual(await login, { type: "oauth", access: NEW_KEY, refresh: "", expires: EXPIRES });
 
   const sent = lab.calls[0].body;
